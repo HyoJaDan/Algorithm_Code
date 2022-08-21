@@ -17,7 +17,7 @@ bool BFS(queue<Node>q, vector<vector<bool>>visited, vector<vector<bool>>&realvis
   while(!q.empty())
   {
     Node now=q.front();q.pop();
-
+    asdfasdf;
     for(int i=0;i<3;i++)
     {
       int dy=now.y+direct[i][0];
