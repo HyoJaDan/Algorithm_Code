@@ -1,61 +1,53 @@
-#include<iostream>
-#include<algorithm>
-#include<vector>
+#include <iostream>
+#include <algorithm>
+#include <vector>
 using namespace std;
 
-char c;
-int R, C;
-int map[10001][501];
-int visit[10001][501];
-int dx[3] = { -1,0,1 };
-int dy[3] = { 1,1,1 };
-bool check; // 가스관 도달여부
-int cnt;
-
-void dfs(int x, int y)
+bool visited[101];
+vector<int>ans;
+int arr[101]={0};
+int ansNum=0;
+bool isVisited=false;
+void run(int first,int second)
 {
-	visit[x][y] = true; // 방문 기록
-	if (y == C)
+	if(visited[second]==true)
 	{
-		cnt++;
-		check = true;
+		if(first==second)
+		{
+			ansNum++;
+			ans.push_back(second);
+			isVisited=true;
+		}
 		return;
 	}
-	for (int i = 0; i < 3; i++)
+	
+	visited[second]=true;
+	run(first,arr[second]);
+	if(isVisited)
 	{
-		int next_x = x + dx[i];
-		int next_y = y + dy[i];
-		if (next_x >= 1 && next_y >= 1 && next_x <= R && next_y <= C)
-		{
-			if (map[next_x][next_y] == 1 && !visit[next_x][next_y])
-			{
-				dfs(next_x, next_y);
-				if (check) return;
-			}
-		}
+		ans.push_back(second);
 	}
 }
 
-int main() 
+int main(void)
 {
-	ios::sync_with_stdio(0); 
-	cin.tie(0); 
-
-	cin >> R >> C;
-
-	for (int i = 1; i <= R; i++)
-		for (int j = 1; j <= C; j++)
-		{
-			cin >> c;
-			if (c == '.') map[i][j] = 1;
-			else map[i][j] = 0;
-		}
-
-	for (int i = 1; i <= R; i++)
+	int n;cin>>n;
+	for(int i=1;i<=n;i++)
 	{
-		check = false;
-		dfs(i, 1);
+		cin>>arr[i];
 	}
-		
-	cout << cnt;
+	for(int i=1;i<=n;i++)
+	{
+		visited[i]=true;
+		run(i,arr[i]);
+		isVisited=false;
+		memset(visited,false,101);
+	}
+	sort(ans.begin(),ans.end());
+	cout<<ansNum<<endl;
+	for(unsigned int i=0;i<ans.size();i++)
+	{
+		if(visited[ans[i]]==false)cout<<ans[i]<<endl;
+		visited[ans[i]]=true;
+	}
 }
