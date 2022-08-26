@@ -1,53 +1,73 @@
 #include <iostream>
-#include <algorithm>
+#include <queue>
 #include <vector>
 using namespace std;
 
-bool visited[101];
-vector<int>ans;
-int arr[101]={0};
-int ansNum=0;
-bool isVisited=false;
-void run(int first,int second)
+typedef struct node
 {
-	if(visited[second]==true)
-	{
-		if(first==second)
-		{
-			ansNum++;
-			ans.push_back(second);
-			isVisited=true;
-		}
-		return;
-	}
-	
-	visited[second]=true;
-	run(first,arr[second]);
-	if(isVisited)
-	{
-		ans.push_back(second);
-	}
-}
+  int data;
+  int level;
+} Node;
 
 int main(void)
 {
-	int n;cin>>n;
-	for(int i=1;i<=n;i++)
-	{
-		cin>>arr[i];
-	}
-	for(int i=1;i<=n;i++)
-	{
-		visited[i]=true;
-		run(i,arr[i]);
-		isVisited=false;
-		memset(visited,false,101);
-	}
-	sort(ans.begin(),ans.end());
-	cout<<ansNum<<endl;
-	for(unsigned int i=0;i<ans.size();i++)
-	{
-		if(visited[ans[i]]==false)cout<<ans[i]<<endl;
-		visited[ans[i]]=true;
-	}
+  int n;
+  cin >> n;
+  int map[50][50] = {0};
+  int from, to;
+  while (1)
+  {
+    cin >> from >> to;
+    if (from == -1 && to == -1)
+      break;
+    map[from][to] = 1;
+    map[to][from] = 1;
+  }
+
+  priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;
+  for (int j = 1; j <= n; j++)
+  {
+    queue<Node> q;
+    q.push({j, 0});
+    bool visited[51] = {false};
+    visited[j] = true;
+    int jValue = 0;
+
+    while (!q.empty())
+    {
+      Node now = q.front();
+      q.pop();
+
+      if (now.level > jValue)
+        jValue = now.level;
+      for (int i = 1; i <= n; i++)
+      {
+        if (map[now.data][i] == 0)
+          continue;
+        if (visited[i])
+          continue;
+
+        visited[i] = true;
+        q.push({i, now.level + 1});
+      }
+    }
+    pq.push({jValue, j});
+  }
+  vector<int> v;
+  int a = pq.top().first;
+  cout << pq.top().first;
+  int ans = 0;
+  while (a == pq.top().first)
+  {
+    ans++;
+    v.push_back(pq.top().second);
+    pq.pop();
+  }
+  cout << " " << v.size() << endl;
+  for (int i = 0; i < v.size(); i++)
+  {
+    cout << v[i] << " ";
+  }
+
+  return 0;
 }
