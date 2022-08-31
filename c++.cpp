@@ -1,32 +1,37 @@
 #include <iostream>
 using namespace std;
-int arr[10001];
 
-int main()
+int main(void)
 {
-  int N, M;
-  cin >> N >> M;
+  ios::sync_with_stdio(false);
+  cin.tie(NULL);
+  cout.tie(NULL);
+  int n, s;
+  cin >> n >> s;
 
-  for (int i = 0; i < N; i++)
+  int start = 0, end = 0, sum = 0;
+  int arr[100001] = {0};
+  int ans = 987654321;
+  for (int i = 0; i < n; i++)
     cin >> arr[i];
 
-  int ans = 0;
-
-  int start = 0;
-  int end = 0;
-  int sum = 0;
-
-  while (end <= N)
+  while (end <= n)
   {
-    if (sum >= M)
+    if (sum >= s)
+    {
+      if (end - start < ans)
+        ans = end - start;
       sum -= arr[start++];
-    else if (sum < M)
+    }
+    else if (sum < s)
     {
       sum += arr[end++];
     }
-    if (sum == M)
-      ans++;
   }
-
-  cout << ans << "\n";
+  if (ans == 987654321)
+  {
+    cout << 0;
+    return 0;
+  }
+  cout << ans;
 }
