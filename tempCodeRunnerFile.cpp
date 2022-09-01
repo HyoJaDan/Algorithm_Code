@@ -1,2 +1,0 @@
-
-    else if (sum >= s)

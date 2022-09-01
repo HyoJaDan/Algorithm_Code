@@ -1,37 +1,47 @@
 #include <iostream>
+#include <algorithm>
+#include <vector>
+#define INF 21e8
 using namespace std;
+
+int abs(int a)
+{
+  if (a < 0)
+    a = -a;
+  return a;
+}
 
 int main(void)
 {
-  ios::sync_with_stdio(false);
+  ios_base::sync_with_stdio(false);
   cin.tie(NULL);
   cout.tie(NULL);
-  int n, s;
-  cin >> n >> s;
-
-  int start = 0, end = 0, sum = 0;
-  int arr[100001] = {0};
-  int ans = 987654321;
+  int n;
+  cin >> n;
+  vector<int> v(n);
   for (int i = 0; i < n; i++)
-    cin >> arr[i];
+    cin >> v[i];
+  sort(v.begin(), v.end());
 
-  while (end <= n)
+  int minValue = INF, a, b;
+  int L = 0, R = n - 1;
+  while (L < R)
   {
-    if (sum >= s)
+    int temp = v[L] + v[R];
+    if (abs(temp) < minValue)
     {
-      if (end - start < ans)
-        ans = end - start;
-      sum -= arr[start++];
+      minValue = abs(temp);
+      a = v[L];
+      b = v[R];
     }
-    else if (sum < s)
-    {
-      sum += arr[end++];
-    }
+    if (temp > 0)
+      R--;
+    else
+      L++;
   }
-  if (ans == 987654321)
-  {
-    cout << 0;
-    return 0;
-  }
-  cout << ans;
+
+  if (a < b)
+    cout << a << " " << b;
+  else
+    cout << b << " " << a;
 }
