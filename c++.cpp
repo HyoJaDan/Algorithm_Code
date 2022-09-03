@@ -1,36 +1,42 @@
 #include <iostream>
 #include <algorithm>
-#include <vector>
+#include <math.h>
+#define ll long long
 using namespace std;
+ll arr[5000];
+ll ans[3];
 
-int main(void)
+int main()
 {
   ios_base::sync_with_stdio(false);
   cin.tie(NULL);
-
-  int n;
-  cin >> n;
-  vector<int> v(n);
-  for (int i = 0; i < n; i++)
-    cin >> v[i];
-  int k;
-  cin >> k;
-  sort(v.begin(), v.end());
-
-  int ans = 0;
-  for (int i = 0; i < n - 1; i++)
+  int num;
+  ll result = 3000000001;
+  cin >> num;
+  for (int i = 0; i < num; i++)
+    cin >> arr[i];
+  sort(arr, arr + num);
+  for (int k = 0; k < num - 2; k++)
   {
-    for (int j = i + 1; j < n; j++)
+    int l = k + 1, r = num - 1;
+    while (l < r)
     {
-      int now = v[i] + v[j];
-      if (now == k)
+      ll val = arr[k] + arr[l] + arr[r];
+      if (abs(val) < result)
       {
-        ans++;
+        result = abs(val);
+        ans[0] = arr[k];
+        ans[1] = arr[l];
+        ans[2] = arr[r];
+        //처리
       }
-      else if (now > k)
-        break;
+      if (val < 0)
+        l++;
+      else
+        r--;
     }
   }
-
-  cout << ans;
+  for (int i = 0; i < 3; i++)
+    cout << ans[i] << " ";
+  return 0;
 }
