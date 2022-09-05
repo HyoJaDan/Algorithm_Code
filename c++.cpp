@@ -1,39 +1,83 @@
 #include <iostream>
-#include <algorithm>
+#include <string>
 using namespace std;
-int arr[30000];
-int rawFish[3001];
-int num, d, k, c;
 
-int main()
+int GO(int L, int R, string s)
+{
+  int ans = 1;
+  while (L < R)
+  {
+    if (s[L] == s[R])
+    {
+      L++;
+      R--;
+    }
+    else
+    {
+      return 2;
+    }
+  }
+  return 1;
+}
+
+int main(void)
 {
   ios_base::sync_with_stdio(false);
   cin.tie(NULL);
   cout.tie(NULL);
-  int result = 0, cnt = 0;
-  cin >> num >> d >> k >> c;
-  for (int i = 0; i < num; i++)
-    cin >> arr[i];
-  int left = 0, right = k - 1;
-  for (int i = 0; i < k; i++)
-  {
-    rawFish[arr[i]]++;
-    if (rawFish[arr[i]] == 1)
-      cnt++;
-  }
-  rawFish[c]++;
-  if (rawFish[c] == 1)
-    cnt++;
 
-  while (left < num)
+  int n;
+  cin >> n;
+  for (int i = 0; i < n; i++)
   {
-    result = max(result, cnt);
-    if (--rawFish[arr[left++]] == 0)
-      cnt--;
-    right = (right + 1) % num;
-    if (++rawFish[arr[right]] == 1)
-      cnt++;
+    string s;
+    cin >> s;
+
+    int L = 0, R = s.size() - 1;
+    int ans = 0;
+    bool NO = false;
+    while (L < R)
+    {
+      if (s[L] == s[R])
+      {
+        L++;
+        R--;
+      }
+      else
+      {
+        if (ans == 0)
+        {
+          if (s[L] == s[R - 1] && s[L + 1] == s[R])
+          {
+            int a = GO(L + 1, R, s);
+            int b = GO(L, R - 1, s);
+            a > b ? cout << b << '\n' : cout << a << '\n';
+            NO = true;
+            break;
+          }
+          if (s[L] == s[R - 1])
+            R--;
+          else if (s[L + 1] == s[R])
+            L++;
+          else
+          {
+            cout << 2 << '\n';
+            NO = true;
+            break;
+          }
+          ans++;
+        }
+        else
+        {
+          cout << 2 << '\n';
+          NO = true;
+          break;
+        }
+      }
+    }
+    if (NO)
+      continue;
+    else
+      cout << ans << '\n';
   }
-  cout << result;
-  return 0;
 }
