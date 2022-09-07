@@ -8,7 +8,8 @@
     "queue": "cpp",
     "ios": "cpp",
     "chrono": "cpp",
-    "stack": "cpp"
+    "stack": "cpp",
+    "ostream": "cpp"
   },
   "C_Cpp.errorSquiggles": "Disabled"
 }

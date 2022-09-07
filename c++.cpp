@@ -1,123 +1,63 @@
 #include <iostream>
-#include <stack>
+#include <vector>
+#include <memory.h>
 using namespace std;
+
+vector<int> map[100001];
+vector<int> reverse_map[100001];
+bool visited[100001] = {false};
+int cnt = -1, reverse_cnt = -1;
+
+void dfs(int now)
+{
+  if (visited[now])
+    return;
+
+  visited[now] = true;
+  cnt++;
+
+  /* for (int next : map[now]) */
+  for (int i = 0; i < map[now].size(); i++)
+  {
+    /* dfs(next); */
+    dfs(map[now][i]);
+  }
+}
+void reverse_dfs(int now)
+{
+  if (visited[now])
+    return;
+
+  visited[now] = true;
+  reverse_cnt++;
+
+  for (int i = 0; i < reverse_map[now].size(); i++)
+  {
+    reverse_dfs(map[now][i]);
+  }
+  /* for (int next : reverse_map[now])
+  {
+    reverse_dfs(next);
+  } */
+}
 
 int main(void)
 {
   ios_base::sync_with_stdio(false);
-  stack<int> s;
-  stack<int> s2;
-  int n;
-  cin >> n;
-  string str;
-  cin >> str;
-  for (int i = 0; i < n; i++)
-  {
-    if (str[i] == 'R')
-    {
-      s.push(1);
-      s2.push(1);
-    }
-    else
-    {
-      s.push(0);
-      s2.push(0);
-    }
-  }
-  int ans = 0, ans2 = 0;
-  while (!s.empty())
-  {
-    if (s.top())
-      s.pop();
-    else
-      break;
-  }
-  while (!s.empty())
-  {
-    if (s.top() == 0)
-    {
-    }
-    else
-    {
-      ans++;
-    }
-    s.pop();
-  }
+  cin.tie(NULL);
 
-  while (!s2.empty())
+  int n, m, x, a, b;
+  cin >> n >> m >> x;
+  for (int i = 0; i < m; i++)
   {
-    if (!s2.top())
-      s2.pop();
-    else
-      break;
+    cin >> a >> b;
+    map[a].push_back(b);
+    reverse_map[b].push_back(a);
   }
-  while (!s2.empty())
-  {
-    if (s2.top() == 1)
-    {
-    }
-    else
-    {
-      ans2++;
-    }
-    s2.pop();
-  }
-  stack<int> s3;
-  stack<int> s4;
-  for (int i = n - 1; i >= 0; i--)
-  {
-    if (str[i] == 'R')
-    {
-      s3.push(1);
-      s4.push(1);
-    }
-    else
-    {
-      s3.push(0);
-      s4.push(0);
-    }
-  }
+  dfs(x);
 
-  int ans3 = 0, ans4 = 0;
-  while (!s3.empty())
-  {
-    if (s3.top())
-      s3.pop();
-    else
-      break;
-  }
-  while (!s3.empty())
-  {
-    if (s3.top() == 0)
-    {
-    }
-    else
-    {
-      ans3++;
-    }
-    s3.pop();
-  }
+  memset(visited, 0x00, sizeof(visited));
+  reverse_dfs(x);
 
-  while (!s4.empty())
-  {
-    if (!s4.top())
-      s4.pop();
-    else
-      break;
-  }
-  while (!s4.empty())
-  {
-    if (s4.top() == 1)
-    {
-    }
-    else
-    {
-      ans4++;
-    }
-    s4.pop();
-  }
-  int x, y;
-  ans < ans2 ? x = ans : x = ans2;
-  ans3 < ans4 ? y = ans3 : y = ans4;
-  x < y ? cout << x : cout << y;
+  cout << reverse_cnt + 1 << " " << n - cnt << endl;
 }
