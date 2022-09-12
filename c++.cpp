@@ -1,63 +1,52 @@
 #include <iostream>
-#include <vector>
-#include <memory.h>
+#include <queue>
 using namespace std;
 
-vector<int> map[100001];
-vector<int> reverse_map[100001];
-bool visited[100001] = {false};
-int cnt = -1, reverse_cnt = -1;
-
-void dfs(int now)
+typedef struct node
 {
-  if (visited[now])
-    return;
+  int level[5];
+  int now;
+} Node;
 
-  visited[now] = true;
-  cnt++;
-
-  /* for (int next : map[now]) */
-  for (int i = 0; i < map[now].size(); i++)
-  {
-    /* dfs(next); */
-    dfs(map[now][i]);
-  }
-}
-void reverse_dfs(int now)
-{
-  if (visited[now])
-    return;
-
-  visited[now] = true;
-  reverse_cnt++;
-
-  for (int i = 0; i < reverse_map[now].size(); i++)
-  {
-    reverse_dfs(map[now][i]);
-  }
-  /* for (int next : reverse_map[now])
-  {
-    reverse_dfs(next);
-  } */
-}
-
+int DAT[5] = {10, -10, 1, -1, 60};
 int main(void)
 {
   ios_base::sync_with_stdio(false);
   cin.tie(NULL);
-
-  int n, m, x, a, b;
-  cin >> n >> m >> x;
-  for (int i = 0; i < m; i++)
+  cout.tie(NULL);
+  int T;
+  cin >> T;
+  while (T--)
   {
-    cin >> a >> b;
-    map[a].push_back(b);
-    reverse_map[b].push_back(a);
+    int ans;
+    cin >> ans;
+    queue<Node> q;
+    q.push({{0, 0, 0, 0, ans / 60}, 0});
+    ans %= 60;
+    while (!q.empty())
+    {
+      Node now = q.front();
+      q.pop();
+
+      if (now.now == ans)
+      {
+        cout << now.level[4] << " ";
+        for (int i = 0; i < 4; i++)
+        {
+          cout << now.level[i] << " ";
+        }
+        cout << '\n';
+        break;
+      }
+      for (int i = 0; i < 5; i++)
+      {
+        int Nnow = now.now + DAT[i];
+        if (Nnow < 0 || Nnow >= 120)
+          continue;
+        now.level[i]++;
+        q.push({{now.level[0], now.level[1], now.level[2], now.level[3], now.level[4]}, Nnow});
+        now.level[i]--;
+      }
+    }
   }
-  dfs(x);
-
-  memset(visited, 0x00, sizeof(visited));
-  reverse_dfs(x);
-
-  cout << reverse_cnt + 1 << " " << n - cnt << endl;
 }
