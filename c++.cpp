@@ -1,52 +1,29 @@
 #include <iostream>
-#include <queue>
 using namespace std;
 
-typedef struct node
-{
-  int level[5];
-  int now;
-} Node;
-
-int DAT[5] = {10, -10, 1, -1, 60};
 int main(void)
 {
-  ios_base::sync_with_stdio(false);
-  cin.tie(NULL);
-  cout.tie(NULL);
-  int T;
-  cin >> T;
-  while (T--)
+  int n, k;
+  cin >> n >> k;
+  int ans = 0;
+  string s;
+  cin >> s;
+  for (int i = 0; i < n; i++)
   {
-    int ans;
-    cin >> ans;
-    queue<Node> q;
-    q.push({{0, 0, 0, 0, ans / 60}, 0});
-    ans %= 60;
-    while (!q.empty())
+    if (s[i] == 'P')
     {
-      Node now = q.front();
-      q.pop();
-
-      if (now.now == ans)
+      for (int j = i - k; j <= i + k; j++)
       {
-        cout << now.level[4] << " ";
-        for (int i = 0; i < 4; i++)
-        {
-          cout << now.level[i] << " ";
-        }
-        cout << '\n';
-        break;
-      }
-      for (int i = 0; i < 5; i++)
-      {
-        int Nnow = now.now + DAT[i];
-        if (Nnow < 0 || Nnow >= 120)
+        if (j < 0 || j >= n)
           continue;
-        now.level[i]++;
-        q.push({{now.level[0], now.level[1], now.level[2], now.level[3], now.level[4]}, Nnow});
-        now.level[i]--;
+        if (s[j] == 'H')
+        {
+          ans++;
+          s[j] = '0';
+          break;
+        }
       }
     }
   }
+  cout << ans;
 }
