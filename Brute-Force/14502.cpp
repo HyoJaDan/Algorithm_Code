@@ -27,7 +27,7 @@ void isMax(vector<vector<int> >&map)
 void bfs(vector<vector<int>> map,queue<Point> q){
   int direct[4][2] = {-1, 0, 1, 0, 0, 1, 0, -1};
 
-  while(!q.empty())
+  while (!q.empty())
   {
     Point now = q.front();
     q.pop();
@@ -74,7 +74,7 @@ int main(void)
 {
   cin >> n >> m;
   vector<vector<int>> map(n, vector<int>(m, 0));
-    queue<Point> q;
+  queue<Point> q;
   for (int i = 0; i < n;i++)
   {
     for (int j = 0; j < m;j++)
