@@ -1,38 +1,32 @@
-#include <iostream>
+#include<iostream>
+#include<algorithm>
+#include<set>
 using namespace std;
-
-int arr[51] = {0};
-int n, s, m;
-int answer = -1;
-bool depth[50][1001]={false};
-
-void dfs(int level, int now)
-{
-	if(level==n)
-	{
-		answer=max(answer, now);
-		return;
-	}
-  if(depth[level][now])return;
-  depth[level][now]=true;
-  
-	int plus = now + arr[level];
-	if(plus>=0&&plus<=m)
-		dfs(level + 1, plus);
-
-	int minus = now - arr[level];
-	if(minus>=0&&minus<=m)
-		dfs(level + 1, minus);
-}
-
-int main(void)
-{
-	cin.tie(NULL);
-	cin.sync_with_stdio(false);
-
-	cin >> n >> s >> m;
-	for (int i = 0; i < n;i++)
-		cin >> arr[i];
-	dfs(0, s);
-	cout << answer;
+int n;
+multiset<long long> a;
+int main(){
+    cin.tie(0);
+    cout.tie(0);
+    ios_base::sync_with_stdio(0);
+    cin >> n;
+    for(int i = 0; i < n; i++){
+        int tmp;
+        cin >> tmp;
+        a.insert(tmp);
+    }
+    if(n == 1){
+        if(*a.begin() == 1) cout << 0 << endl;
+        else cout << *a.begin() << endl;
+        return 0;
+    }
+    long long ans = 0;
+    while(a.size() != 1){
+        long long tar = * a.begin() + * (++a.begin());
+        ans += tar;
+        // cout << "tartar" << tar<<endl;
+        a.erase(a.begin());
+        a.erase(a.begin());
+        a.insert(tar);
+    }
+    cout << ans << endl;
 }

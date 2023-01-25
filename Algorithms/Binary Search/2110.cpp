@@ -1,40 +1,39 @@
 #include <iostream>
-#include <vector>
-#include <algorithm>
+
 using namespace std;
 
-void BS(int n, int c, vector<int> &v)
-{
-    int right = v[n-1];
-    int left = 1;
-    int answer = 0;
+int N, S, M;
+int v_list[51] = {};
+bool dp[51][1001] = {};
 
-    while(left<=right)
-    {
-      int num = 1;
-      int mid = (right+left)/2;
-      int start = v[0];
-      for(int i = 1; i < n; i++)
-        if(v[i] - start >= mid) start = v[i],num++;
-      if(num >= c) answer = mid, left = mid + 1;
-      else  right = mid - 1;
-    }
+int solve() {
+	dp[0][S] = true;;
 
-    cout << answer;
+	for (int i=1; i<=N; i++) {
+		for (int j=0; j<=M; j++) {
+			if (!dp[i-1][j]) continue;
+
+			int up = j + v_list[i], down =  j - v_list[i];
+
+			if (down >= 0) dp[i][down] = true;
+			if (up <= M) dp[i][up] = true;
+		}
+	}
+	
+	int ret = -1;
+	for (int i=0; i<=M; i++) {
+		if (dp[N][i]) ret = i;
+	}
+
+	return ret;
 }
 
-int main(void)
-{
-  cin.tie(NULL);
-  cin.sync_with_stdio(false);
-  int n, c, input;
-  cin >> n >> c;
-  vector<int> v;
-  for (int i = 0; i < n; i++)
-  {
-    cin >> input;
-    v.push_back(input);
-  }
-  sort(v.begin(),v.end());
-  BS(n,c,v);
+int main() {
+	ios::sync_with_stdio(false); cin.tie(NULL); cout.tie(NULL);
+	// freopen("input.txt", "rt", stdin);
+
+	cin >> N >> S >> M;
+	for (int i=1; i<=N; i++) cin >> v_list[i];
+
+	cout << solve() << "\n";
 }
