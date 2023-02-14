@@ -1,2 +1,28 @@
-남산 위에 저 소나무 철갑을 두른 듯 바람 서리 불변함은 일편 단심일세
-동해물과 백두산이 마르고 닳도록 하느님이 보우하사 우리나라 만세 무궁화 삼천리 화려강산 대한사람 대한으로 길이 보전하세.
+#include <iostream>
+using namespace std;
+
+int Max;
+char path[10]={0};
+char value[3] = {"AB"};
+void run(int level, bool left, bool right)
+{
+  for (int i = 0; i < 2;i++)
+  {
+    if(level!=2)
+    {
+      if (left == true)
+        cout << 'A' << endl;
+      else if (right == true)
+        cout << 'B'<<endl;
+      run(level + 1, true, false);
+      run(level+1,false,true);
+    }
+    else
+      return;
+  }
+}
+
+int main(void)
+{
+  run(0,true,false);
+}
