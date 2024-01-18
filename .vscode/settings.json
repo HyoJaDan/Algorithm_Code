@@ -63,7 +63,19 @@
     "type_traits": "cpp",
     "typeinfo": "cpp",
     "unordered_map": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "grade": "cpp",
+    "__availability": "cpp",
+    "fstream": "cpp",
+    "__verbose_abort": "cpp",
+    "iomanip": "cpp",
+    "filesystem": "cpp",
+    "list": "cpp",
+    "__tree": "cpp",
+    "map": "cpp",
+    "set": "cpp",
+    "unordered_set": "cpp",
+    "charconv": "cpp"
   },
   "C_Cpp.errorSquiggles": "Disabled"
 }
