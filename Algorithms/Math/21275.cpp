@@ -6,9 +6,9 @@
 using namespace std;
 typedef long long ll;
 
-map<char, int> m;
 ll answer1[36] = {0};
 ll answer2[36] = {0};
+map<char, int> m;
 void init()
 {
     m['1'] = 1;
