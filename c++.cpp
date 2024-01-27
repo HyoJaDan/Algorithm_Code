@@ -1,116 +1,106 @@
 #include <iostream>
-#include <vector>
-#include <map>
 #include <math.h>
-#include <string>
 using namespace std;
-typedef long long ll;
+const int Max = 98765;
+const int HalfMax = 98765 / 2 + 10;
 
-map<char, int> m;
-ll answer1[36] = {0};
-ll answer2[36] = {0};
-void init()
+bool isPrime[Max + 5] = {false,false};
+int K,M;
+int path[6]={0};
+bool visited[11] = {false};
+int ans = 0;
+
+void getPrime()
 {
-    m['1'] = 1;
-    m['2'] = 2;
-    m['3'] = 3;
-    m['4'] = 4;
-    m['5'] = 5;
-    m['6'] = 6;
-    m['7'] = 7;
-    m['8'] = 8;
-    m['9'] = 9;
-    m['a'] = 10;
-    m['b'] = 11;
-    m['c'] = 12;
-    m['d'] = 13;
-    m['e'] = 14;
-    m['f'] = 15;
-    m['g'] = 16;
-    m['h'] = 17;
-    m['i'] = 18;
-    m['j'] = 19;
-    m['k'] = 20;
-    m['l'] = 21;
-    m['m'] = 22;
-    m['n'] = 23;
-    m['o'] = 24;
-    m['p'] = 25;
-    m['q'] = 26;
-    m['r'] = 27;
-    m['s'] = 28;
-    m['t'] = 29;
-    m['u'] = 30;
-    m['v'] = 31;
-    m['w'] = 32;
-    m['z'] = 33;
-    m['y'] = 34;
-    m['z'] = 35;
-}
+    for (int i = 2; i < HalfMax;i++)
+        isPrime[i] = true;
 
-void start(bool isFirst){
-    string inputData;
-    cin >> inputData;
-    int size = inputData.size();
-    ll ans = 0;
-    int j = size - 1;
-
-    for (int k = 2; k <= 35;k++)
+    for (int i = 2; i <= HalfMax;i++)
     {
-        ans = 0;
-        for (int i = 0, j = size - 1; i < size && j >= 0; i++, j--)
-        {
-            ll temp = pow(k, j);
-            ll temp2 = m[inputData[i]];
-            if(k<temp2)
-            {
-                break;
-            }
-            ans += temp * temp2;
-        }
-        if(isFirst)
-            answer1[k] = ans;
-        else
-            answer2[k] = ans;
-    }
-}
+        if(!isPrime[i])
+            continue;
 
-void compare(){
-    int answerNumber = 0;
-    long long answer = 0;
-    int answerA;
-    int answerB;
-
-    for (int i = 2; i <= 35;i++)
-    {
-        for (int j = 2; j <= 35;j++)
+        for (int j = i * 2; j <= HalfMax; j += i)
         {
-            if(i==j)
-                continue;
-            if (answer1[i] == answer2[j] && answer1[i] != 0)
-            {
-                answer = answer1[i];
-                answerA = i;
-                answerB = j;
-                answerNumber++;
-            }
+            isPrime[j] = false;
         }
     }
+}
 
-    if (answerNumber == 0)
-        cout << "Impossible";
-    else if (answerNumber > 1)
-        cout << "Multiple";
-    else
+void conditionB(int current)
+{
+    int valueForConditionB = current;
+    while(valueForConditionB>M)
+        valueForConditionB /= M;
+   /*  cout << valueForConditionB << endl; */
+
+    // conditionB
+    //  current가 i로 나뉘어 떨어져야 하고, 그 값이 소수이면,
+    for (int i = 2; i <= current/2+1;i++)
     {
-        cout << answer << " " << answerA << " " << answerB;
+        if (valueForConditionB % i == 0 && isPrime[i] && isPrime[valueForConditionB / i])
+        {
+           /*  cout << "DONE" << endl;
+            cout << i << " " << valueForConditionB / i << endl */;
+            ans++;
+        }
+
     }
 }
 
-int main(void)  
+void conditionA(int current){
+    for (int i = 2; i <= current/2+1;i++)
+    {
+        //conditionA
+        //current = 143
+        // i(2) should Pirme && current-i(141) should prime
+        if (isPrime[i] && isPrime[current - i] && i != current - i)
+        {
+            /* cout<< " Current : "<<current <<endl;
+            cout << "satisfied-A : " << i << " , "<<current-i<<endl; */
+
+            conditionB(current);
+            /* cout << endl
+                 << endl; */
+        }
+    }
+    return;
+}
+
+void dfs(int level)
 {
-    init();
-    start(true);
-    start(false);
-    compare();
+    if(level==K)
+    {
+        int current = 0;
+        int times = pow(10, level - 1);
+        for (int i = 0; i < K; i++)
+        {
+            current += path[i] * times;
+            times /= 10;
+        }
+        conditionA(current);
+        return;
+    }
+
+    for (int i = 0; i < 10;i++)
+    {
+        if(level==0 && i==0)
+            continue;
+        if(visited[i])
+            continue;
+
+        path[level] = i;
+        visited[i] = true;
+        dfs(level + 1);
+        visited[i] = false;
+        path[level] = 0;
+    }
+}
+
+int main(void)
+{
+    cin >> K >> M;
+    getPrime();
+    dfs(0);
+    cout << ans << endl;
 }
