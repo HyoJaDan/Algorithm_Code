@@ -1,5 +1,4 @@
 #include <iostream>
-#include <string>
 using namespace std;
 typedef long long ll;
 
@@ -12,11 +11,9 @@ int main(void)
     for (int i = n; i >= 2;i--)
     {
         ans *= i;
+        ans %= 100000000;
         while(ans%10==0)
             ans /= 10;
-        ans %= 1000000000000;
     }
-    
-    string temp = to_string(ans);
-    cout << temp.substr(temp.size()-5);
+    cout << ans % 10;
 }
