@@ -1,22 +1,47 @@
 #include <iostream>
-#include <string>
+#include <math.h>
 using namespace std;
-typedef long long ll;
+
+const int MAX = 10000;
+bool isPrime[MAX + 5] = {false};
+
+void getPrime()
+{
+    for (int i = 2; i <= MAX;i++)
+        isPrime[i] = true;
+
+    for (int i = 2; i <= MAX;i++)
+    {
+        if(isPrime[i]==false)
+            continue;
+
+        for (int j = i + i; j <= MAX; j += i)
+        {
+            isPrime[j] = false;
+        }
+    }
+}
+
+void solve()
+{
+    int n,inputData;
+    cin >> n;
+    while(n--)
+    {
+        cin >> inputData;
+        for (int i = inputData / 2; i >= 2;i--)
+        {
+            if(isPrime[i] && isPrime[inputData-i])
+            {
+                cout << i << " " << inputData-i << endl;
+                break;
+            }
+        }
+    }
+}
 
 int main(void)  
 {
-    int n;
-    cin >> n;
-
-    ll ans = 1;
-    for (int i = n; i >= 2;i--)
-    {
-        ans *= i;
-        while(ans%10==0)
-            ans /= 10;
-        ans %= 1000000000000;
-    }
-    
-    string temp = to_string(ans);
-    cout << temp.substr(temp.size()-5);
+    getPrime();
+    solve();
 }
