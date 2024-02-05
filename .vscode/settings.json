@@ -75,7 +75,8 @@
     "map": "cpp",
     "set": "cpp",
     "unordered_set": "cpp",
-    "charconv": "cpp"
+    "charconv": "cpp",
+    "2630cpp": "cpp"
   },
   "C_Cpp.errorSquiggles": "Disabled"
 }
