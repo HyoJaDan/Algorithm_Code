@@ -2,80 +2,69 @@
 #include <vector>
 using namespace std;
 
-int map[1030][1030] = {0};
-int n;
-
-void input()
+void swap(int *x,int *y)
 {
-    cin >> n;
-    for (int i = 0; i < n;i++)
+    int temp = *x;
+    *x = *y;
+    *y = temp;
+}
+
+int partition(vector<int> &arr, int left, int right)
+{
+	int pivot = arr[right];
+    int i = left - 1;
+
+    for (int j = left; j <= right - 1;j++)
     {
-        for (int j = 0; j < n;j++)
+        if (arr[j] <= pivot)
         {
-            cin >> map[i][j];
+            i++;
+            swap(&arr[i], &arr[j]);
         }
     }
+    swap(&arr[i + 1], &arr[right]);
+    return (i + 1);
 }
 
-int findSecondLargeNumber(int fromA, int toA, int fromB, int toB){
-    int firstNumber=-11111;
-    int secondNumber=-11111;
-    for (int i = fromA; i <= toA;i++)
-    {
-        for (int j = fromB; j <= toB;j++)
-        {
-            if (map[i][j] >= firstNumber )
-            {
-                secondNumber = firstNumber;
-                firstNumber = map[i][j];
-            }
-            else if (map[i][j] < firstNumber && map[i][j] > secondNumber)
-            {
-                secondNumber = map[i][j];
-            }
-        }
-    }
-    return secondNumber;
-}
-
-void divideAndConquer(vector<vector<int>> &newMap, int leftA, int rightA, int leftB, int rightB)
+void QuickSort(vector<int> &arr, int left, int right)
 {
-    if (rightA - leftA == 1)
-    {
-        int secondNumber=findSecondLargeNumber(leftA, rightA, leftB, rightB);
-        newMap[rightA / 2][rightB / 2] = secondNumber;
-    }
-    else
-    {
-        int midA = (leftA + rightA) / 2;
-        int midB = (leftB + rightB) / 2;
+	int pivot;
 
-        divideAndConquer(newMap,leftA, midA, leftB, midB);
-        divideAndConquer(newMap,leftA, midA, midB+1, rightB);
-        divideAndConquer(newMap,midA + 1, rightA, leftB, midB);
-        divideAndConquer(newMap,midA + 1, rightA, midB + 1, rightB);
-    }
-}
-void mapInitializer(){
-    int newMapSize = n;
-    while(newMapSize!=1)
-    {
-        newMapSize /= 2;
-        vector<vector<int>> newMap(newMapSize, vector<int>(newMapSize, 0));
-        divideAndConquer(newMap, 0, newMapSize * 2-1, 0, newMapSize * 2-1);
-        for (int i = 0; i < newMapSize;i++)
-        {
-            for (int j = 0; j < newMapSize;j++)
-            {
-                map[i][j] = newMap[i][j];
-            }
-        }
-    }
+	// 분할 가능한 경우
+	if (left < right)
+	{
+		// 둘로 나누기(피봇을 기준으로 나눔)
+		pivot = partition(arr, left, right); 
+
+		// 왼쪽 영역 정렬
+		QuickSort(arr, left, pivot - 1);
+
+		// 오른쪽 영역 정렬
+		QuickSort(arr, pivot+1, right);
+
+	}
 }
 
-int main(void)
-{
-    input();
-    mapInitializer();
-    cout << map[0][0];
+
+int main() {
+	ios_base::sync_with_stdio(false);
+	cin.tie(NULL);
+	cout.tie(NULL);
+
+	vector<int> arr{ 7,1,8,3,5,2};
+
+	cout << "정렬 전 : ";
+	for (auto i : arr)
+		cout << i << ", ";
+	cout << endl;
+
+	// right에는 크기가 아니라, 마지막 인덱스 값 전달.
+	QuickSort(arr,0,arr.size()-1);
+
+	cout << "정렬 후 : ";
+	for (auto i : arr)
+		cout << i << ", ";
+	cout << endl;
+	
+	return 0;
 }
