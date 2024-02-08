@@ -105,6 +105,23 @@ struct FuncInfo
 FuncInfo getFuncInfo(string idenfr);
 void parseFuncRParams(FuncInfo funcInfo);
 
+struct Label{
+	int Point;
+};
+
+struct Code
+{
+	string name;
+	int level;
+	int addr;
+	string print;
+	Label lavel;
+	int type=0;
+};
+Code code[1000];
+int codeAt = 0;
+int address = 0;
+
 void insertWordList(string label, string idenfr)
 {
 	wordList[top].label = label;
@@ -870,6 +887,13 @@ void parseStmt()
 
 void parseConstInitVal()
 {
+	// 11
+	/* code[codeAt++] = {"INT", 0, 1, "", "", 0};
+	code[codeAt++] = {"LDA", 0, address, "", "", 0};
+	address++;
+	code[codeAt++] = {"LDC", 0, 1, "", "", 0};
+	code[codeAt++] = {"STOS", 0, 0, "", "", 0}; */
+
 	lastNonTerminalLine = wordNow.lineId;
 	if (wordNow.idenfr == "{")
 	{
@@ -962,8 +986,13 @@ void parseInitVal()
     }
     else
     {
-        parseExp();
-    }
+		//11
+		code[codeAt++] = {"INT", 0, 1, "", 0, 0};
+		code[codeAt++] = {"LDA", 0, address, "", 0, 0};
+		address++;
+
+		parseExp();
+	}
 
     outputSyntax_Analysis("InitVal");
 }
@@ -1198,7 +1227,11 @@ void parseFuncDef()
 //메인 함수일떄 사용
 void parseMainFunc()
 {
-	Syntax_Analysis_Main(true, true); //int
+	//11
+	Label label;
+	code[codeAt++] = {"INT_L", 0, 0, "", label, 0};
+
+	Syntax_Analysis_Main(true, true); // int
 	Syntax_Analysis_Main(true, true); //main
 	Syntax_Analysis_Main(true, true); // (
 
@@ -1222,6 +1255,10 @@ void parseCompUnit()
 	// 메인 함수라면
 	if(temp1=="INTTK"&&isMain=="MAINTK")
 	{
+		//11
+		Label label;
+		code[codeAt++] = {"JTM", 0, 0, 0, label, 0};
+
 		currentFunctionType = INT;
 		parseMainFunc();
 		outputSyntax_Analysis("CompUnit");
@@ -1230,6 +1267,10 @@ void parseCompUnit()
 	// 함수라면
 	else if((temp1=="VOIDTK"&&temp3=="LPARENT")||(temp1=="INTTK"&&temp3=="LPARENT"))
 	{
+		//11
+		Label label;
+		code[codeAt] = {"JTM", 0, 0, 0, label, 0};
+
 		if(temp1=="VOIDTK")
 			currentFunctionType = VOID;
 		else if(temp1=="INTTK")
