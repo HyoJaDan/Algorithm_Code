@@ -1,8 +1,9 @@
 #include <iostream>
-#include <string>
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+#include <vector>
+#include <string>
 using namespace std;
 
 void parseConstDef();
@@ -105,20 +106,86 @@ struct FuncInfo
 FuncInfo getFuncInfo(string idenfr);
 void parseFuncRParams(FuncInfo funcInfo);
 
-struct Label{
-	int Point;
+class Label{
+    private:
+        int point = 0;
+
+    public:
+        Label() { }
+
+        int getPoint() {
+            return point;
+        }
+
+        void setPoint(int point) {
+            this->point = point;
+        }
 };
 
-struct Code
-{
-	string name;
-	int level;
-	int addr;
-	string print;
-	Label lavel;
-	int type=0;
+class Code{
+    private:
+        string name;
+        int level;
+        int addr;
+        string print;
+        Label* label; // Label 클래스가 정의되어 있어야 합니다.
+
+        int type = 0;
+
+    public:
+        // 1, 2, 3, 4, 5는 각 생성자의 타입을 나타냅니다.
+        // 1: name, level, addr
+        // 2: name, addr
+        // 3: name
+        // 4: name, print
+        // 5: name, label
+		Code() { } // 기본 생성자 추가
+
+        Code(string name, int level, int addr) : name(name), level(level), addr(addr), type(1) { }
+
+        Code(string name, int addr) : name(name), addr(addr), type(2) { }
+
+        Code(string name) : name(name), type(3) { }
+
+        Code(string name, string print) : name(name), print(print), type(4) { }
+
+        Code(string name, Label* label) : name(name), label(label), type(5) { }
+
+        void show(){
+            if(type == 1){
+                cout << name << "  " << level << "  " << addr << endl;
+            }else if(type == 2){
+                cout << name << "  " << addr << endl;
+            }else if(type == 3){
+                cout << name << endl;
+            }else if(type == 4){
+                cout << name << "  " << print << endl;
+            }else if(type == 5){
+                cout << name << "  " << label->getPoint() << endl; // Label 클래스의 getPoint() 함수가 필요합니다.
+            }
+        }
+
+        string getName(){
+            return name;
+        }
+
+        Label* getLabel(){
+            return label;
+        }
+
+        int getLevel(){
+            return level;
+        }
+
+        int getAddr(){
+            return addr;
+        }
+
+        string getPrint(){
+            return print;
+        }
 };
-Code code[1000];
+vector<Code> codeList;
 int codeAt = 0;
 int address = 0;
 
@@ -458,6 +525,9 @@ int primaryExp(int type){
 		// 2. number
 		if(wordNow.idenfr[0]>='0'&&wordNow.idenfr[0]<='9')
 		{
+			//11
+			Code code1("LDC", stoi(wordNow.idenfr));
+			codeList.push_back(code1);
 			Syntax_Analysis_Main(true, true);
 			outputSyntax_Analysis("Number");
 		}
@@ -465,6 +535,10 @@ int primaryExp(int type){
 		else 
 		{
 			type=parseLVal(type);
+			//11
+			// if(need_loads)??
+			Code code1("LODS");
+			codeList.push_back(code1);
 		}
 	}
 	outputSyntax_Analysis("PrimaryExp");
@@ -540,9 +614,20 @@ int addExp(int type){
 	
 	outputSyntax_Analysis("AddExp");
 	if (wordNow.label == "PLUS" || wordNow.label == "MINU")
-	{     
+	{
+		string op = wordNow.label;
 		Syntax_Analysis_Main(true, true);
 		type=addExp(type);
+		if(op=="PLUS")
+		{
+			Code code1("ADD");
+			codeList.push_back(code1);
+		}
+		else if(op=="MINU")
+		{
+			Code code1("SUB");
+			codeList.push_back(code1);
+		}
 	}
 	return type;
 }
@@ -760,6 +845,9 @@ int parseLVal(int type)
 			type = ARR1;
 		//만약 3차원 배열이 나오면, 그대로 type=arrNum의 갯수대로 간다.
 	}
+	//여기 보완해야할거 씹많음
+	Code code1("LDA", 0, 0);
+	codeList.push_back(code1);
 	outputSyntax_Analysis("LVal");
 	return type;
 }
@@ -987,14 +1075,17 @@ void parseInitVal()
     else
     {
 		//11
-		code[codeAt++] = {"INT", 0, 1, "", 0, 0};
-		code[codeAt++] = {"LDA", 0, address, "", 0, 0};
+		Code code1("INT", 1);
+		Code code2("LDA", 0, address);
+		codeList.push_back(code1);
+		codeList.push_back(code2);
 		address++;
-
 		parseExp();
+		Code code3("STOS");
+		codeList.push_back(code3);
 	}
 
-    outputSyntax_Analysis("InitVal");
+	outputSyntax_Analysis("InitVal");
 }
 
 void parseVarDef()
@@ -1024,7 +1115,7 @@ void parseVarDef()
 
 	if (wordNow.idenfr== "=") // = 즉 초기화가 있으면
 	{
-		Syntax_Analysis_Main(true, true); // = 출력
+	    Syntax_Analysis_Main(true, true); // = 출력
 		parseInitVal();
 	}
 
@@ -1229,7 +1320,8 @@ void parseMainFunc()
 {
 	//11
 	Label label;
-	code[codeAt++] = {"INT_L", 0, 0, "", label, 0};
+	Code code("INT_L", &label);
+	codeList.push_back(code);
 
 	Syntax_Analysis_Main(true, true); // int
 	Syntax_Analysis_Main(true, true); //main
@@ -1257,7 +1349,8 @@ void parseCompUnit()
 	{
 		//11
 		Label label;
-		code[codeAt++] = {"JTM", 0, 0, 0, label, 0};
+		Code code1("JTM", &label);
+		codeList.push_back(code1);
 
 		currentFunctionType = INT;
 		parseMainFunc();
@@ -1268,8 +1361,8 @@ void parseCompUnit()
 	else if((temp1=="VOIDTK"&&temp3=="LPARENT")||(temp1=="INTTK"&&temp3=="LPARENT"))
 	{
 		//11
-		Label label;
-		code[codeAt] = {"JTM", 0, 0, 0, label, 0};
+		/* Label label;
+		code[codeAt] = {"JTM", 0, 0, 0, label, 0}; */
 
 		if(temp1=="VOIDTK")
 			currentFunctionType = VOID;
