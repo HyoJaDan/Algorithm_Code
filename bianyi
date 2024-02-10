@@ -79,14 +79,14 @@ enum TypeEnum {
 };
 int currentFunctionType;
 
-struct Symbol
+struct Symbol22
 {
 	string idenfr;
 	int kind;
 	int type;
 	int level;
 };
-Symbol symbolTable[10000];
+Symbol22 symbolTable[10000];
 int symbolTableTop = -1;
 int levelNow = 0;
 
@@ -125,9 +125,9 @@ class Label{
 class Code{
     private:
         string name;
-        int level;
-        int addr;
-        string print;
+        int level=0;
+        int addr=0;
+        string print="";
         Label* label; // Label 클래스가 정의되어 있어야 합니다.
 
         int type = 0;
@@ -187,7 +187,294 @@ class Code{
 };
 vector<Code> codeList;
 int codeAt = 0;
+
+////////////
+
+
+
+class Symbol {
+private:
+    string name;
+    int dim;
+    int dim1 = 0;
+    int dim2 = 0;
+    int address = 0;
+    bool isConst = false;
+    bool isGlobal = false;
+public:
+    Symbol(string name, int dim) : name(name), dim(dim) {}
+
+    bool operator==(const Symbol& sym) {
+        return this->name == sym.name;
+    }
+
+    virtual void show_value() {}
+
+    // 이하 getter, setter 함수는 자바 코드와 유사하게 변환하였습니다.
+
+    int getAddress() {
+        return address;
+    }
+
+    void setAddress(int address) {
+        this->address = address;
+    }
+
+    string getName() {
+        return name;
+    }
+
+    void setName(string name) {
+        this->name = name;
+    }
+
+    int getDim() {
+        return dim;
+    }
+
+    void setDim(int dim) {
+        this->dim = dim;
+    }
+
+    int getDim1() {
+        return dim1;
+    }
+
+    void setDim1(int dim1) {
+        this->dim1 = dim1;
+    }
+
+    int getDim2() {
+        return dim2;
+    }
+
+    void setDim2(int dim2) {
+        this->dim2 = dim2;
+    }
+
+	//c++은 오버라이드 안되니까 isConst->getIsConst로 바꾼다
+    bool getIsConst() {
+        return isConst;
+    }
+
+    void setConst(bool aConst) {
+        isConst = aConst;
+    }
+	//오버라이드 되니까 isGlobal -> getIsGlobal로 바꾼다
+    bool getIsGlobal() {
+        return isGlobal;
+    }
+
+    void setGlobal(bool global) {
+        isGlobal = global;
+    }
+
+    virtual string getType() {
+        return "";
+    }
+};
+
+class Block {
+private:
+    string type;
+    vector<Block*> CBlock;
+    Block* FBlock;
+    vector<Symbol*> SymbolTable;
+    int level;
+    bool returnTk;
+public:
+    Block(string type, Block* FBlock, int level)
+        : type(type), FBlock(FBlock), level(level), returnTk(false) {}
+    
+    void addCBlock(Block* block) {
+        this->CBlock.push_back(block);
+    }
+
+    bool addSymbol(Symbol* symbol) {
+        if(find(SymbolTable.begin(), SymbolTable.end(), symbol) == SymbolTable.end()){
+            SymbolTable.push_back(symbol);
+            return true;
+        }else {
+            return false;
+        }
+    }
+
+    bool containSymbol(Symbol* symbol) {
+        return find(SymbolTable.begin(), SymbolTable.end(), symbol) != SymbolTable.end();
+    }
+
+    Symbol* search(string str) {
+        Block* searchBlock = this;
+        Symbol* target = nullptr;
+        bool found = false;
+        while(searchBlock != nullptr && !found){
+            for (Symbol* symbol : searchBlock->getSymbolTable()) {
+                if (symbol->getName() == str) {
+                    found = true;
+                    target = symbol;
+                    break;
+                }
+            }
+            searchBlock = searchBlock->getFBlock();
+        }
+        return target;
+    }
+
+    // 이하 getter, setter 및 show 함수는 자바 코드와 유사하게 변환하였습니다.
+
+    vector<Block*> getCBlock() {
+        return CBlock;
+    }
+
+    Block* getFBlock() {
+        return FBlock;
+    }
+
+    vector<Symbol*> getSymbolTable() {
+        return SymbolTable;
+    }
+
+    bool isReturnTk() {
+        return returnTk;
+    }
+
+    int getLevel() {
+        return level;
+    }
+
+    string getType() {
+        return type;
+    }
+
+    void setBlockItems(vector<Symbol*> blockItems) {
+        this->SymbolTable = blockItems;
+    }
+
+    void setFBlock(Block* FBlock) {
+        this->FBlock = FBlock;
+    }
+
+    void setLevel(int level) {
+        this->level = level;
+    }
+
+    void setReturnTk(bool returnTk) {
+        this->returnTk = returnTk;
+    }
+
+    void setType(string type) {
+        this->type = type;
+    }
+
+    /* void show() {
+        cout << "------------------" << type << "----------------------\n";
+        cout << "level: " << level << "\n";
+        for (Symbol* symbol : SymbolTable) {
+            cout << symbol->getName() << "   dim: " << symbol->getDim() << "   dim1: " << symbol->getDim1()
+                      << "   dim2: " << symbol->getDim2() << "  type: " << symbol->getType()
+                      << "  address: " << symbol->getAddress() << "  global: " << symbol->isGlobal() << "\n";
+            if (symbol->isConst()) {
+                symbol->show_value();
+            } else if(symbol->getName() == "func"){
+                dynamic_cast<Func_symbol*>(symbol)->show();
+            }
+        }
+        for (Block* cblock : CBlock) {
+            cblock->show();
+        }
+    } */
+};
+
+class Param_symbol : public Symbol {
+private:
+    string type = "param";
+public:
+    Param_symbol(string name, int dim) : Symbol(name, dim) {}
+
+    bool operator==(const Param_symbol& sym) {
+        return Symbol::operator==(sym);
+    }
+
+    string getType() {
+        return type;
+    }
+
+    void setType(string type) {
+        this->type = type;
+    }
+};
+class Var_symbol : public Symbol {
+private:
+    string type = "var";
+public:
+    Var_symbol(string name, int dim) : Symbol(name, dim) {}
+
+    bool operator==(const Var_symbol& sym) {
+        return Symbol::operator==(sym);
+    }
+
+    string getType() {
+        return type;
+    }
+
+    void setType(string type) {
+        this->type = type;
+    }
+};
+
+class Func_symbol : public Symbol {
+private:
+    string type = "func";
+    vector<Param_symbol*> params;
+    int startCode;
+public:
+    Func_symbol(string name, int dim) : Symbol(name, dim) {}
+
+    void addParam(Param_symbol* param_symbol) {
+        this->params.push_back(param_symbol);
+    }
+
+    bool operator==(const Func_symbol& sym) {
+        return Symbol::operator==(sym);
+    }
+
+    void show() {
+        for (Param_symbol* param : params) {
+            cout << "param: " << param->getName() << "\n";
+        }
+    }
+
+    string getType() {
+        return type;
+    }
+
+    void setType(string type) {
+        this->type = type;
+    }
+
+    int getStartCode() {
+        return startCode;
+    }
+
+    vector<Param_symbol*> getParams() {
+        return params;
+    }
+
+    void setParams(vector<Param_symbol*> params) {
+        this->params = params;
+    }
+
+    void setStartCode(int startCode) {
+        this->startCode = startCode;
+    }
+};
+
+int level;
+Block *curBlock = new Block("global", NULL, level);
+Func_symbol *cur_func_symbol = NULL;
 int address = 0;
+bool ismainfunc = false;
+/////////////////
 
 void insertWordList(string label, string idenfr)
 {
@@ -800,6 +1087,7 @@ void parsePrint()
 	Syntax_Analysis_Main(true, true); //'('
 	int numOfOutput = countFormatSpecifier(wordNow.idenfr);
 	int checkCount = 0;
+	string strcon = wordNow.idenfr;
 	Syntax_Analysis_Main(true, true); // formatString
 
 	while(wordNow.label == "COMMA") // ,라면
@@ -812,6 +1100,8 @@ void parsePrint()
 	{
 		error(wordNow.lineId, "l");
 	}
+	Code code1("PRF", strcon);
+	codeList.push_back(code1);
 }
 
 int parseLVal(int type)
@@ -821,6 +1111,10 @@ int parseLVal(int type)
 	if(getType!=-1)
 		type = getType;
 	
+	//22
+	string lval_name = wordNow.idenfr;
+	Symbol *symbol = curBlock->search(lval_name);
+
 	int arrNum = 0;
 	Syntax_Analysis_Main(true, true); // IDent 출력;
 	while(wordNow.idenfr=="[")
@@ -846,7 +1140,8 @@ int parseLVal(int type)
 		//만약 3차원 배열이 나오면, 그대로 type=arrNum의 갯수대로 간다.
 	}
 	//여기 보완해야할거 씹많음
-	Code code1("LDA", 0, 0);
+	int isGlobal = symbol->getIsGlobal() ? 1 : 0;
+	Code code1("LDA", isGlobal, symbol->getAddress());
 	codeList.push_back(code1);
 	outputSyntax_Analysis("LVal");
 	return type;
@@ -1011,7 +1306,7 @@ void parseConstDef()
 	int type = INT;
 	if (!parseErrorB(wordNow.idenfr, wordNow.lineId)) // 변수명 확인
 	{
-		symbolTable[++symbolTableTop] = Symbol{ wordNow.idenfr, CONST, type, levelNow };
+		symbolTable[++symbolTableTop] = Symbol22{ wordNow.idenfr, CONST, type, levelNow };
 	}
 	Syntax_Analysis_Main(true, true); //c 출력
 	int numOfArrLayer = 0;
@@ -1090,11 +1385,14 @@ void parseInitVal()
 
 void parseVarDef()
 {
-	//error handeler
+	Var_symbol* var_symbol = new Var_symbol("", 0);
+	curBlock->addSymbol(var_symbol);
+	var_symbol->setName(wordNow.idenfr);
+	// error handeler
 	int type = INT;
 	if (!parseErrorB(wordNow.idenfr, wordNow.lineId)) // 변수명 확인
 	{
-		symbolTable[++symbolTableTop] = Symbol{ wordNow.idenfr, VAR, type, levelNow};
+		symbolTable[++symbolTableTop] = Symbol22{ wordNow.idenfr, VAR, type, levelNow};
 	}
 	Syntax_Analysis_Main(true, true); //c 출력
 	int numOfArrLayer = 0;
@@ -1233,7 +1531,7 @@ void parseFuncFParam()
 	int type = INT;
 	if (!parseErrorB(wordNow.idenfr, wordNow.lineId)) // 변수명 확인
 	{
-		symbolTable[++symbolTableTop] = Symbol{ wordNow.idenfr, PARAM, type, levelNow};
+		symbolTable[++symbolTableTop] = Symbol22{ wordNow.idenfr, PARAM, type, levelNow};
 	}
 	Syntax_Analysis_Main(true, true); //ident
 	int numOfArrLayer = 0;
@@ -1292,7 +1590,7 @@ void parseFuncDef()
 	//error handeler
 	if (!parseErrorB(wordNow.idenfr, wordNow.lineId)) // error b 함수명 중복 확인
 	{
-		symbolTable[++symbolTableTop] = Symbol{ wordNow.idenfr, FUNC, type, levelNow };
+		symbolTable[++symbolTableTop] = Symbol22{ wordNow.idenfr, FUNC, type, levelNow };
 	}
 	Syntax_Analysis_Main(true, true); // Ident : 함수이름
 
@@ -1318,10 +1616,25 @@ void parseFuncDef()
 //메인 함수일떄 사용
 void parseMainFunc()
 {
-	//11
+	//22
+	Func_symbol *func_symbol = new Func_symbol("", 0);
+	string type;
+	string name;
+	int address = 0;
+	func_symbol->setStartCode(codeList.size());
+	func_symbol->setName("main");
+
+	curBlock->addSymbol(func_symbol);
+	Block* block1 = new Block("int", curBlock, curBlock->getLevel()+1);
+	curBlock->addCBlock(block1);
+	curBlock = block1;
+	cur_func_symbol = func_symbol;
+
+	// 11
 	Label label;
 	Code code("INT_L", &label);
 	codeList.push_back(code);
+
 
 	Syntax_Analysis_Main(true, true); // int
 	Syntax_Analysis_Main(true, true); //main
@@ -1582,121 +1895,160 @@ void outputError()
 	}
 }
 
+class Interpreter {
+private:
+    vector<int> dstack;
+    int BAddr = 0;
+    int at = 0;
+    int sp = -1;
+
+public:
+    vector<string> interpret() {
+        int addr;
+        vector<string> res;
+        while (at < codeList.size()) {
+            Code *curCode = codeList[at];
+
+            cout << curCode->getName() << "\n";
+            cout << "code.getLevel() = " << curCode->getLevel() << "\n";
+            cout << "code.getAddr() = " << curCode->getAddr() << "\n";
+            cout << "code.getPrint() = " << curCode->getPrint() << "\n";
+
+            if (curCode->getName() == "INT") {
+				sp += curCode->getAddr();
+				at++;
+			} else if (curCode->getName() == "DOWN") {
+				sp -= curCode->getAddr();
+				at++;
+			} else if (curCode->getName() == "LOD") {
+				sp++;
+				if (curCode->getLevel() == 0) {
+					addr = BAddr + curCode->getAddr();
+				} else {
+					addr = curCode->getAddr();
+				}
+				dstack[sp] = dstack[addr];
+				at++;
+			} else if (curCode->getName() == "LODS") {
+				dstack[sp] = dstack[dstack[sp]];
+				at++;
+			} else if (curCode->getName() == "LDA") {
+				sp++;
+				if (curCode->getLevel() == 0) {
+					addr = BAddr + curCode->getAddr();
+				} else {
+					addr = curCode->getAddr();
+				}
+				dstack[sp] = addr;
+				at++;
+			} else if (curCode->getName() == "LDC") {
+				sp++;
+				dstack[sp] = curCode->getAddr();
+				at++;
+			} else if (curCode->getName() == "STOS") {
+				sp--;
+				dstack[dstack[sp]] = dstack[sp + 1];
+				sp--;
+				at++;
+			} else if (curCode->getName() == "ADD") {
+				sp--;
+				dstack[sp] = dstack[sp] + dstack[sp + 1];
+				at++;
+			} else if (curCode->getName() == "SUB") {
+				sp--;
+				dstack[sp] = dstack[sp] - dstack[sp + 1];
+				at++;
+			} else if (curCode->getName() == "MUL") {
+				sp--;
+				dstack[sp] = dstack[sp] * dstack[sp + 1];
+				at++;
+			} else if (curCode->getName() == "DIV") {
+				sp--;
+				dstack[sp] = dstack[sp] / dstack[sp + 1];
+				at++;
+			} else if (curCode->getName() == "MOD") {
+				sp--;
+				dstack[sp] = dstack[sp] % dstack[sp + 1];
+				at++;
+			} else if (curCode->getName() == "MINU") {
+				dstack[sp] = -dstack[sp];
+				at++;
+			} else if (curCode->getName() == "GET") {
+				int value;
+				cin >> value;
+				sp++;
+				dstack[sp] = value;
+				at++;
+			}else if (curCode->getName() == "PRF") {
+				string s = curCode->getPrint();
+				s.erase(remove(s.begin(), s.end(), '\"'), s.end());
+				int ci = count(s.begin(), s.end(), '%');
+				sp = sp - ci;
+				for (int i = 0; i < ci; i++) {
+					size_t pos = s.find("%d");
+					if (pos != string::npos) {
+						s.replace(pos, 2, to_string(dstack[sp + i + 1]));
+					}
+				}
+				at++;
+				replace(s.begin(), s.end(), "\\n", "\n");
+				res.push_back(s);
+			} else if (curCode->getName() == "JTM") {
+				BAddr = sp + 1;
+				at = curCode->getLabel()->getPoint();
+			} else if (curCode->getName() == "CAL") {
+				dstack[sp + 1] = 0;
+				dstack[sp + 2] = BAddr;
+				dstack[sp + 3] = at + 1;
+				BAddr = sp + 1;
+				sp = sp + 3;
+				at = curCode->getAddr();
+			} else if (curCode->getName() == "RET") {
+				at = dstack[BAddr + 2];
+				sp = BAddr;
+				BAddr = dstack[BAddr + 1];
+			} else if (curCode->getName() == "RET_TO_END") {
+				at = codeList.size();
+			} else if (curCode->getName() == "INT_L") {
+				sp += curCode->getLabel()->getPoint();
+				at++;
+			} else {
+				at++;
+			}
+
+
+            for (int i=0; i < dstack.size(); i++) {
+                cout << dstack[i] << " ";
+            }
+            cout << "\n";
+            cout << "BAddr = " << BAddr << "\n";
+            cout << "at = " << at << "\n";
+            cout << "sp = " << sp << "\n";
+            cout << "\n\n";
+        }
+        return res;
+    }
+};
 int main(void) {
     init(); 
     Lexical_Analysis();
     Syntax_Analysis();
     outputError();
 
-    fclose(inputFile);
+	for (int i = 0; i < codeList.size();i++)
+	{
+		cout << codeList[i].getName() << endl;
+		cout << "code.getLevel() = " << codeList[i].getLevel() << endl;
+		cout << "code.getAddr() = " << codeList[i].getAddr() << endl;
+		cout << "code.getPrint() = " << codeList[i].getPrint() << endl
+			 << endl
+			 << endl;
+	}
+
+
+	fclose(inputFile);
     inFile.close();
     fout.close();
     errorOut.close();
     return 0;
 }
-/*
-****  initVal is a good example of [], {}, | ****
-
-{} : fanfu more than 0
-ex : FuncFParams -> FuncFParam{ ',' FuncParam } // if this
-while(couple[1]==",")
-{
-    if(!Syntex_Analysis_Main(true,true)) break;
-    ParseFuncFParam();
-}
-fout<<"<FuncFParams>"<<endl;
-// daima is this. 
-
-
-
-문법
- // 0-> 1.是否存在Decl 2.是否存在FuncDef
-编译单元 CompUnit → {Decl} {FuncDef} MainFuncDef
-
-// 1<-0 覆盖两种声明
-声明 Decl → ConstDecl | VarDecl
-基本类型 BType → 'int' // 存在即可
-
-//ConstDecl부분
-// 2<-1 1.花括号内重复0 次 2.花括号内重复多次
-常量声明 ConstDecl → 'const' BType ConstDef { ',' ConstDef } ';'
-// 3<-2 변수, 1차원, 2차원 배열을 포함
-常数定义 ConstDef → Ident { '[' ConstExp ']' } '=' ConstInitVal
-// 4<-3 위에서 선언한 변수, 1차원, 2차원 배열을 초기화
-常量初值 ConstInitVal → ConstExp | '{' [ ConstInitVal { ',' ConstInitVal } ] '}'
-
-// 5<-1 1花括号内重复0次 2.花括号内重复多次
-变量声明 VarDecl → BType VarDef { ',' VarDef } ';'
-// 包含普通变量、一维数组、二维数组定义
-变量定义 VarDef → Ident { '[' ConstExp ']' } | Ident { '[' ConstExp ']' } '=' InitVal
-// 1.表达式初值 2.一维数 组初值 3.二维数组初值
-变量初值 InitVal → Exp | '{' [ InitVal { ',' InitVal } ] '}'
- -> a. Exp : 1
- -> b. { Exp } : {1}
- -> c. { Exp, Exp ... } : { 1, 2, 3 }
- -> d. { initVal } -> {{ InitVal }} -> {{Exp}} : {{1,2}}
- -> e.                {{ InitVal }} -> {{Exp,Exp...}} : {{1,2},{3,4}}
-
-
-// 0. 메인 함수
-主函数定义 MainFuncDef → 'int' 'main' '(' ')' Block
-
-// 일반 함수
-函数定义 FuncDef → FuncType Ident '(' [FuncFParams] ')' Block // 1.无形参 2.有形参
-// 覆盖两种类型的函数
-函数类型 FuncType → 'void' | 'int'
-// 1. 1.花括号内重复0次 2.花括号内重复多次
-函数形参表 FuncFParams → FuncFParam { ',' FuncFParam }
-// 1.普通变量 2.一维数组变量 3.二维数组变量<- 이거안함
-函数形参 FuncFParam → BType Ident ['[' ']' { '[' ConstExp ']' }]
-
-
-
-
-// 1.花括号内重复0次 2.花括号内重复多次
-语句块 Block → '{' { BlockItem } '}'
-// 覆盖两种语句块项
-语句块项 BlockItem → Decl | Stmt
-
-// 每种类型的语句都要覆盖
-语句 Stmt →
-LVal '=' Exp ';'
-| [Exp] ';' //有无Exp两种情况
-| Block
-| 'if' '(' Cond ')' Stmt [ 'else' Stmt ] // 1.有else 2.无else
-//1. 无缺省 2. 缺省第一个 ForStmt 3. 缺省Cond 4. 缺省第二个ForStmt
-| 'for' '(' [ForStmt] ';' [Cond] ';' [ForStmt] ')' Stmt
-| 'break' ';' | 'continue' ';'
-| 'return' [Exp] ';' // 1.有Exp 2.无Exp
-| LVal '=' 'getint''('')'';'
-| 'printf''('FormatString{','Exp}')'';' // 1.有Exp 2.无Exp
-
-语句 ForStmt → LVal '=' Exp // 存在即可
-表达式 Exp → AddExp 注:SysY 表达式是int 型表达式 // 存在即可
-条件表达式 Cond → LOrExp // 存在即可
-// 1.普通变量 2.一维数组 3.二维数组
-左值表达式 LVal → Ident {'[' Exp ']'}
-
-// 3
-// 三种情况均需覆盖
-基本表达式 PrimaryExp → '(' Exp ')' | LVal | Number
-数值 Number → IntConst // 存在即可
-
-// 3种情况均需覆盖,函数调用也需要覆盖FuncRParams的不同情况
-一元表达式 UnaryExp → PrimaryExp | Ident '(' [FuncRParams] ')' | UnaryOp UnaryExp // 存在即可
-单目运算符 UnaryOp → '+' | '−' | '!' 注:'!'仅出现在条件表达式中 // 三种均需覆盖
-// 1.花括号内重复0次 2.花括号内重复多次 3.Exp需要覆盖数组传参和部分数组传参
-函数实参表 FuncRParams → Exp { ',' Exp }
-
-
-// 1// 1.UnaryExp 2.* 3./ 4.% 均需覆盖
-乘除模表达式 MulExp → UnaryExp | MulExp ('*' | '/' | '%') UnaryExp
-加减表达式 AddExp → MulExp | AddExp ('+' | '−') MulExp // 1.MulExp 2.+ 需覆盖 3.- 需 覆盖
-
-关系表达式 RelExp → AddExp | RelExp ('<' | '>' | '<=' | '>=') AddExp // 1.AddExp 2.< 3.> 4.<= 5.>= 均需覆盖
-相等性表达式 EqExp → RelExp | EqExp ('==' | '!=') RelExp // 1.RelExp 2.== 3.!= 均需 覆盖
-
-逻辑与表达式 LAndExp → EqExp | LAndExp '&&' EqExp // 1.EqExp 2.&& 均需覆盖
-逻辑或表达式 LOrExp → LAndExp | LOrExp '||' LAndExp // 1.LAndExp 2.|| 均需覆盖
-常量表达式 ConstExp → AddExp 注:使用的Ident 必须是常量 // 存在即可
- */
