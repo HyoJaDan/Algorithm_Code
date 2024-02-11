@@ -76,7 +76,8 @@
     "set": "cpp",
     "unordered_set": "cpp",
     "charconv": "cpp",
-    "2630cpp": "cpp"
+    "2630cpp": "cpp",
+    "bianyi": "c"
   },
   "C_Cpp.errorSquiggles": "Disabled"
 }

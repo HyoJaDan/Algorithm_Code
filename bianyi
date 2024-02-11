@@ -35,6 +35,7 @@ FILE *inputFile;
 ifstream inFile("input.txt");
 ofstream fout("output.txt");
 ofstream errorOut("error.txt");
+ofstream pcodeOut("pcoderesult.txt");
 
 string token;
 string inputedString="";
@@ -128,7 +129,7 @@ class Code{
         int level=0;
         int addr=0;
         string print="";
-        Label* label; // Label 클래스가 정의되어 있어야 합니다.
+        Label* label=nullptr; // Label 클래스가 정의되어 있어야 합니다.
 
         int type = 0;
 
@@ -469,11 +470,11 @@ public:
     }
 };
 
-int level;
+int level = 1;
 Block *curBlock = new Block("global", NULL, level);
 Func_symbol *cur_func_symbol = NULL;
 int address = 0;
-bool ismainfunc = false;
+bool isMainFunc = false;
 /////////////////
 
 void insertWordList(string label, string idenfr)
@@ -842,10 +843,20 @@ int unaryExp(int type){
 	Syntax_Analysis_Main(true, false);
 	string temp = wordNow.idenfr;
 	Syntax_Analysis_Main(false, false);
-	if (wordNow.label == "PLUS" || wordNow.label == "MINU" ||wordNow.label == "NOT")
+	string op;
+
+	if (wordNow.label == "PLUS" || wordNow.label == "MINU" || wordNow.label == "NOT")
 	{
+		op = wordNow.label;
 		unaryOP();
 		type = unaryExp(type);
+
+		//22
+		if(op=="MINU")
+		{
+			Code code1("MINU");
+			codeList.push_back(code1);
+		}
 	}
 	else if(wordNow.label=="IDENFR"&&temp=="(")
 	{
@@ -890,8 +901,24 @@ int mulExp(int type){
 	outputSyntax_Analysis("MulExp");
 	if (wordNow.label == "MULT" || wordNow.label == "DIV" || wordNow.label == "MOD")
 	{
+		string op = wordNow.label;
 		Syntax_Analysis_Main(true, true);
 		type=mulExp(type);
+		if(op=="MULT")
+		{
+			Code code1("MUL");
+			codeList.push_back(code1);
+		}
+		else if(op=="DIV")
+		{
+			Code code1("DIV");
+			codeList.push_back(code1);
+		}
+		else if(op=="MOD")
+		{
+			Code code1("MOD");
+			codeList.push_back(code1);
+		}
 	}
 	return type;
 }
@@ -1055,6 +1082,10 @@ void parseReadStmt()
 
 void parseReturnStmt()
 {
+	//22
+	Code *code1 = new Code("LDA", 0, 0);
+	codeList.push_back(code1);
+
 	isReturnCalled = true;
 	Syntax_Analysis_Main(true, true); // return 출력
 
@@ -1065,7 +1096,16 @@ void parseReturnStmt()
 			error(wordNow.lineId, "f");
 		parseExp();
 	}
-	
+	//22
+	Code *code2 = new Code("STOS");
+	codeList.push_back(code2);
+	Code *code3 = NULL;
+	if(isMainFunc)
+		code3 = new Code("RET_TO_END");
+	else
+		code3 = new Code("RET");
+	codeList.push_back(code3);
+
 	//없으면 종료
 }
 
@@ -1195,7 +1235,16 @@ void parseStmt()
 	//block
 	else if(wordNow.idenfr=="{")
 	{
+		//22
+		Block *block = new Block("block", curBlock, curBlock->getLevel() + 1);
+		block->setFBlock(curBlock);
+		curBlock->addCBlock(block);
+		curBlock = block;
+
 		parseBlock(false);
+
+		//22
+		curBlock = curBlock->getFBlock();
 	}
 	// 1. stmt -> LVal = Exp;
 	// 2. stmt -> LVal = getint();
@@ -1234,6 +1283,10 @@ void parseStmt()
 			// 2. stmt -> LVal = getint();
 			if (wordNow.label == "GETINTTK")
 			{
+				//22
+				Code *code1 = new Code("GET");
+				codeList.push_back(code1);
+
 				lastNonTerminalLine = wordNow.lineId;
 				Syntax_Analysis_Main(true, true); //getint
 				Syntax_Analysis_Main(true, true); //(
@@ -1253,6 +1306,9 @@ void parseStmt()
 				//;가 없는지 확인하는 에러. 있으면 ;까지 출력
 				parseErrorI();
 			}
+			//2
+			Code *code2 = new Code("STOS");
+			codeList.push(code2);
 		}
 		// 3 바로 Exp
 		else
@@ -1405,7 +1461,10 @@ void parseVarDef()
 		// k error : ]가 있는지 없는지 확인후 있으면 ] 출력
 		parseErrorK();
 	}
-	if(numOfArrLayer==1)
+	// 2
+	var_symbol->setAddress(address);
+
+	if (numOfArrLayer == 1)
 		symbolTable[symbolTableTop].type = ARR1;
 	else if(numOfArrLayer==2)
 		symbolTable[symbolTableTop].type = ARR2;
@@ -1620,7 +1679,7 @@ void parseMainFunc()
 	Func_symbol *func_symbol = new Func_symbol("", 0);
 	string type;
 	string name;
-	int address = 0;
+	address = 0;
 	func_symbol->setStartCode(codeList.size());
 	func_symbol->setName("main");
 
@@ -1631,8 +1690,8 @@ void parseMainFunc()
 	cur_func_symbol = func_symbol;
 
 	// 11
-	Label label;
-	Code code("INT_L", &label);
+	Label *label = new Label();
+	Code code("INT_L", label);
 	codeList.push_back(code);
 
 
@@ -1644,7 +1703,10 @@ void parseMainFunc()
 	// ()가 잘 닫히는지 확인하는 오류. 함수에서 )까지 출력한다.
 	parseErrorJ();
 	parseBlock(true);
-	
+
+	// 22
+	label->setPoint(address);
+
 	outputSyntax_Analysis("MainFuncDef");
 }
 
@@ -1664,6 +1726,7 @@ void parseCompUnit()
 		Label label;
 		Code code1("JTM", &label);
 		codeList.push_back(code1);
+		isMainFunc = true;
 
 		currentFunctionType = INT;
 		parseMainFunc();
@@ -1897,9 +1960,9 @@ void outputError()
 
 class Interpreter {
 private:
-    vector<int> dstack;
-    int BAddr = 0;
-    int at = 0;
+	int dstack[10000] = {0};
+	int BAddr = 0;
+	int at = 0;
     int sp = -1;
 
 public:
@@ -1907,117 +1970,169 @@ public:
         int addr;
         vector<string> res;
         while (at < codeList.size()) {
-            Code *curCode = codeList[at];
-
-            cout << curCode->getName() << "\n";
-            cout << "code.getLevel() = " << curCode->getLevel() << "\n";
-            cout << "code.getAddr() = " << curCode->getAddr() << "\n";
-            cout << "code.getPrint() = " << curCode->getPrint() << "\n";
-
-            if (curCode->getName() == "INT") {
-				sp += curCode->getAddr();
+            Code curCode = codeList[at];
+			
+            cout << curCode.getName() << "\n";
+            cout << "code.getLevel() = " << curCode.getLevel() << "\n";
+            cout << "code.getAddr() = " << curCode.getAddr() << "\n";
+            cout << "code.getPrint() = " << curCode.getPrint() << "\n";
+			if(curCode.getLabel()!=nullptr)
+				cout << "code.getLabel() = "<< curCode.getLabel()->getPoint()<<endl;
+			if (curCode.getName() == "INT")
+			{
+				sp += curCode.getAddr();
 				at++;
-			} else if (curCode->getName() == "DOWN") {
-				sp -= curCode->getAddr();
+			}
+			else if (curCode.getName() == "DOWN")
+			{
+				sp -= curCode.getAddr();
 				at++;
-			} else if (curCode->getName() == "LOD") {
+			}
+			else if (curCode.getName() == "LOD")
+			{
 				sp++;
-				if (curCode->getLevel() == 0) {
-					addr = BAddr + curCode->getAddr();
+				if (curCode.getLevel() == 0) {
+					addr = BAddr + curCode.getAddr();
 				} else {
-					addr = curCode->getAddr();
+					addr = curCode.getAddr();
 				}
 				dstack[sp] = dstack[addr];
 				at++;
-			} else if (curCode->getName() == "LODS") {
+			}
+			else if (curCode.getName() == "LODS")
+			{
 				dstack[sp] = dstack[dstack[sp]];
 				at++;
-			} else if (curCode->getName() == "LDA") {
+			}
+			else if (curCode.getName() == "LDA")
+			{
 				sp++;
-				if (curCode->getLevel() == 0) {
-					addr = BAddr + curCode->getAddr();
+				if (curCode.getLevel() == 0) {
+					addr = BAddr + curCode.getAddr();
 				} else {
-					addr = curCode->getAddr();
+					addr = curCode.getAddr();
 				}
 				dstack[sp] = addr;
 				at++;
-			} else if (curCode->getName() == "LDC") {
+			}
+			else if (curCode.getName() == "LDC")
+			{
 				sp++;
-				dstack[sp] = curCode->getAddr();
+				dstack[sp] = curCode.getAddr();
 				at++;
-			} else if (curCode->getName() == "STOS") {
+			}
+			else if (curCode.getName() == "STOS")
+			{
 				sp--;
 				dstack[dstack[sp]] = dstack[sp + 1];
 				sp--;
 				at++;
-			} else if (curCode->getName() == "ADD") {
+			}
+			else if (curCode.getName() == "ADD")
+			{
 				sp--;
 				dstack[sp] = dstack[sp] + dstack[sp + 1];
 				at++;
-			} else if (curCode->getName() == "SUB") {
+			}
+			else if (curCode.getName() == "SUB")
+			{
 				sp--;
 				dstack[sp] = dstack[sp] - dstack[sp + 1];
 				at++;
-			} else if (curCode->getName() == "MUL") {
+			}
+			else if (curCode.getName() == "MUL")
+			{
 				sp--;
 				dstack[sp] = dstack[sp] * dstack[sp + 1];
 				at++;
-			} else if (curCode->getName() == "DIV") {
+			}
+			else if (curCode.getName() == "DIV")
+			{
 				sp--;
 				dstack[sp] = dstack[sp] / dstack[sp + 1];
 				at++;
-			} else if (curCode->getName() == "MOD") {
+			}
+			else if (curCode.getName() == "MOD")
+			{
 				sp--;
 				dstack[sp] = dstack[sp] % dstack[sp + 1];
 				at++;
-			} else if (curCode->getName() == "MINU") {
+			}
+			else if (curCode.getName() == "MINU")
+			{
 				dstack[sp] = -dstack[sp];
 				at++;
-			} else if (curCode->getName() == "GET") {
+			}
+			else if (curCode.getName() == "GET")
+			{
 				int value;
 				cin >> value;
 				sp++;
 				dstack[sp] = value;
 				at++;
-			}else if (curCode->getName() == "PRF") {
-				string s = curCode->getPrint();
+			}
+			else if (curCode.getName() == "PRF")
+			{
+				string s = curCode.getPrint();
+				// 문자열 내의 모든 따옴표(")를 제거합니다.
 				s.erase(remove(s.begin(), s.end(), '\"'), s.end());
+				// "%d"라는 서식 지정자의 개수를 세기 위한 변수를 초기화 합니다.
 				int ci = count(s.begin(), s.end(), '%');
+				// 스택 포인터를 "%d"의 개수만큼 뒤로 이동시킵니다.
 				sp = sp - ci;
+				// "%d"를 스택에서 가져온 숫자로 치환합니다.
 				for (int i = 0; i < ci; i++) {
 					size_t pos = s.find("%d");
 					if (pos != string::npos) {
+						// 스택에서 숫자를 가져와 문자열로 변환합니다.
 						s.replace(pos, 2, to_string(dstack[sp + i + 1]));
 					}
 				}
 				at++;
-				replace(s.begin(), s.end(), "\\n", "\n");
+				// 문자열 내의 모든 "\\n"을 "\n"으로 교체해 줄바꿈 문자를 처리합니다.
+				size_t pos = 0;
+				while ((pos = s.find("\\n", pos)) != std::string::npos)
+				{
+					s.replace(pos, 2, "\n");
+					pos += 1;
+				}
 				res.push_back(s);
-			} else if (curCode->getName() == "JTM") {
+			}
+			else if (curCode.getName() == "JTM")
+			{
 				BAddr = sp + 1;
-				at = curCode->getLabel()->getPoint();
-			} else if (curCode->getName() == "CAL") {
+				at = curCode.getLabel()->getPoint();
+			}
+			else if (curCode.getName() == "CAL")
+			{
 				dstack[sp + 1] = 0;
 				dstack[sp + 2] = BAddr;
 				dstack[sp + 3] = at + 1;
 				BAddr = sp + 1;
 				sp = sp + 3;
-				at = curCode->getAddr();
-			} else if (curCode->getName() == "RET") {
+				at = curCode.getAddr();
+			}
+			else if (curCode.getName() == "RET")
+			{
 				at = dstack[BAddr + 2];
 				sp = BAddr;
 				BAddr = dstack[BAddr + 1];
-			} else if (curCode->getName() == "RET_TO_END") {
+			}
+			else if (curCode.getName() == "RET_TO_END")
+			{
 				at = codeList.size();
-			} else if (curCode->getName() == "INT_L") {
-				sp += curCode->getLabel()->getPoint();
+			}
+			else if (curCode.getName() == "INT_L")
+			{
+				sp += curCode.getLabel()->getPoint();
 				at++;
-			} else {
+			}
+			else
+			{
 				at++;
 			}
 
-
-            for (int i=0; i < dstack.size(); i++) {
+			for (int i=0; i < 10; i++) {
                 cout << dstack[i] << " ";
             }
             cout << "\n";
@@ -2028,6 +2143,14 @@ public:
         }
         return res;
     }
+	void outputPCode(vector<string> interpret)
+	{
+		for (int i = 0; i < interpret.size();i++)
+		{
+			cout << interpret[i] << endl;
+			pcodeOut << interpret[i] << endl;
+		}
+	}
 };
 int main(void) {
     init(); 
@@ -2035,20 +2158,16 @@ int main(void) {
     Syntax_Analysis();
     outputError();
 
-	for (int i = 0; i < codeList.size();i++)
-	{
-		cout << codeList[i].getName() << endl;
-		cout << "code.getLevel() = " << codeList[i].getLevel() << endl;
-		cout << "code.getAddr() = " << codeList[i].getAddr() << endl;
-		cout << "code.getPrint() = " << codeList[i].getPrint() << endl
-			 << endl
-			 << endl;
-	}
-
+	cout << "=====================================" << endl;
+	Interpreter interpreter;
+	vector<string> interpret = interpreter.interpret();
+	/* cout << interpret[0]; */
+	interpreter.outputPCode(interpret);
 
 	fclose(inputFile);
-    inFile.close();
+	inFile.close();
     fout.close();
     errorOut.close();
-    return 0;
+	pcodeOut.close();
+	return 0;
 }

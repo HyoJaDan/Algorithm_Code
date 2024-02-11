@@ -4,45 +4,16 @@ LPARENT (
 RPARENT )
 LBRACE {
 INTTK int
-IDENFR a
+IDENFR c
 ASSIGN =
 INTCON 10
 <Number>
 <PrimaryExp>
 <UnaryExp>
 <MulExp>
-<AddExp>
-<Exp>
-<InitVal>
-<VarDef>
-SEMICN ;
-<VarDecl>
-INTTK int
-IDENFR b
-ASSIGN =
+MULT *
 INTCON 20
 <Number>
-<PrimaryExp>
-<UnaryExp>
-<MulExp>
-<AddExp>
-<Exp>
-<InitVal>
-<VarDef>
-SEMICN ;
-<VarDecl>
-INTTK int
-IDENFR c
-ASSIGN =
-IDENFR a
-<LVal>
-<PrimaryExp>
-<UnaryExp>
-<MulExp>
-<AddExp>
-PLUS +
-IDENFR b
-<LVal>
 <PrimaryExp>
 <UnaryExp>
 <MulExp>
