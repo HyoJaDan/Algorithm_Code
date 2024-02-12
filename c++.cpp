@@ -470,11 +470,39 @@ public:
     }
 };
 
+class Const_symbol : public Symbol {
+private:
+    string type = "const";
+    vector<int> values;
+
+public:
+    Const_symbol(string name, int dim) : Symbol(name, dim) {
+        setConst(true);
+    }
+
+    void setType(std::string type) {
+        this->type = type;
+    }
+
+    string getType() {
+        return type;
+    }
+
+    void setValues(vector<int> values) {
+        this->values = values;
+    }
+
+    vector<int> getValues() {
+        return values;
+    }
+};
+
 int level = 1;
 Block *curBlock = new Block("global", NULL, level);
 Func_symbol *cur_func_symbol = NULL;
 int address = 0;
 bool isMainFunc = false;
+int flag = 0;
 /////////////////
 
 void insertWordList(string label, string idenfr)
@@ -799,7 +827,7 @@ int Syntax_Analysis_Main(bool forward, bool withOutput = false)
 		return 1;
 	}
 }
-
+//PrimaryExp → '(' Exp ')' | LVal | Number 
 int primaryExp(int type){
 	// 1. (EXP)
 	if(wordNow.idenfr=="(")
@@ -1083,7 +1111,7 @@ void parseReadStmt()
 void parseReturnStmt()
 {
 	//22
-	Code *code1 = new Code("LDA", 0, 0);
+	Code code1("LDA", 0, 0);
 	codeList.push_back(code1);
 
 	isReturnCalled = true;
@@ -1097,15 +1125,18 @@ void parseReturnStmt()
 		parseExp();
 	}
 	//22
-	Code *code2 = new Code("STOS");
+	Code code2("STOS");
 	codeList.push_back(code2);
-	Code *code3 = NULL;
 	if(isMainFunc)
-		code3 = new Code("RET_TO_END");
+	{
+		Code code3("RET_TO_END");
+		codeList.push_back(code3);
+	}
 	else
-		code3 = new Code("RET");
-	codeList.push_back(code3);
-
+	{
+		Code code3("RET");
+		codeList.push_back(code3);
+	}
 	//없으면 종료
 }
 
@@ -1180,7 +1211,8 @@ int parseLVal(int type)
 		//만약 3차원 배열이 나오면, 그대로 type=arrNum의 갯수대로 간다.
 	}
 	//여기 보완해야할거 씹많음
-	int isGlobal = symbol->getIsGlobal() ? 1 : 0;
+	
+	int isGlobal = symbol->getIsGlobal() ? 1 : 0; // ??
 	Code code1("LDA", isGlobal, symbol->getAddress());
 	codeList.push_back(code1);
 	outputSyntax_Analysis("LVal");
@@ -1284,7 +1316,7 @@ void parseStmt()
 			if (wordNow.label == "GETINTTK")
 			{
 				//22
-				Code *code1 = new Code("GET");
+				Code code1("GET");
 				codeList.push_back(code1);
 
 				lastNonTerminalLine = wordNow.lineId;
@@ -1306,9 +1338,10 @@ void parseStmt()
 				//;가 없는지 확인하는 에러. 있으면 ;까지 출력
 				parseErrorI();
 			}
-			//2
-			Code *code2 = new Code("STOS");
-			codeList.push(code2);
+			//22
+			
+			Code code2("STOS");
+			codeList.push_back(code2);
 		}
 		// 3 바로 Exp
 		else
@@ -1358,7 +1391,11 @@ void parseConstInitVal()
 
 void parseConstDef()
 {
-	//error handeler
+	//22
+	Const_symbol *const_symbol = new Const_symbol("", 0);
+	curBlock->addSymbol(const_symbol);
+	const_symbol->setName(wordNow.idenfr);
+	// error handeler
 	int type = INT;
 	if (!parseErrorB(wordNow.idenfr, wordNow.lineId)) // 변수명 확인
 	{
@@ -1380,9 +1417,15 @@ void parseConstDef()
 	else if(numOfArrLayer==2)
 		symbolTable[symbolTableTop].type = ARR2;
 
+	//22
+	const_symbol->setAddress(address);
+	if(flag==1)
+		const_symbol->setGlobal(true);
+
 	Syntax_Analysis_Main(true, true); // = 출력
 	parseConstInitVal();
 		
+	//2
 	outputSyntax_Analysis("ConstDef");
 }
 
@@ -1463,7 +1506,8 @@ void parseVarDef()
 	}
 	// 2
 	var_symbol->setAddress(address);
-
+	if(flag==1)
+		var_symbol->setGlobal(true);
 	if (numOfArrLayer == 1)
 		symbolTable[symbolTableTop].type = ARR1;
 	else if(numOfArrLayer==2)
@@ -1584,7 +1628,15 @@ void parseFuncRParams(FuncInfo funcInfo)
 
 void parseFuncFParam()
 {
-	Syntax_Analysis_Main(true, true); //int
+	// 22
+	Param_symbol *param_symbol = new Param_symbol("", 0);
+	string type2;
+	string name;
+	int dim1 = 0;
+	int dim2 = 0;
+	int midvalue = 0;
+
+	Syntax_Analysis_Main(true, true); // int
 
 	//error handeler
 	int type = INT;
@@ -1592,7 +1644,10 @@ void parseFuncFParam()
 	{
 		symbolTable[++symbolTableTop] = Symbol22{ wordNow.idenfr, PARAM, type, levelNow};
 	}
-	Syntax_Analysis_Main(true, true); //ident
+
+	param_symbol->setName(wordNow.idenfr);
+	
+	Syntax_Analysis_Main(true, true); // ident
 	int numOfArrLayer = 0;
 	if (wordNow.idenfr == "[") // [ 라면, 즉 배열이라면
 	{
@@ -1613,7 +1668,12 @@ void parseFuncFParam()
 			parseErrorK();
 		}
 	}
-	if(numOfArrLayer==1)
+	cur_func_symbol->addParam(param_symbol);
+	curBlock->addSymbol(param_symbol);
+	param_symbol->setAddress(address);
+	address++;
+
+	if (numOfArrLayer == 1)
 		symbolTable[symbolTableTop].type = ARR1;
 	else if(numOfArrLayer==2)
 		symbolTable[symbolTableTop].type = ARR2;
@@ -1636,11 +1696,28 @@ void parseFuncFParams()
 // 나머지 함수일때 사용
 void parseFuncDef()
 {
+	//22
+	Func_symbol *func_symbol = new Func_symbol("", 0);
+	address = 3;
+	func_symbol->setStartCode(codeList.size());
+	Label *label = new Label();
+	Code code("INT_L", label);
+	codeList.push_back(code);
+
 	int type;
+	string type2;
 	if (wordNow.idenfr == "void")
+	{
 		type = VOID;
+		type2 = "void";
+		func_symbol->setDim(0);
+	}
 	else if(wordNow.idenfr=="int")
+	{
 		type = INT;
+		type2 = "int";
+		func_symbol->setDim(-1);
+	}
 
 	Syntax_Analysis_Main(true, true); // void, int 구분할 필요가 없는게 return에서 차피 구분하게 만들어놓음
 	
@@ -1651,8 +1728,14 @@ void parseFuncDef()
 	{
 		symbolTable[++symbolTableTop] = Symbol22{ wordNow.idenfr, FUNC, type, levelNow };
 	}
+	func_symbol->setName(wordNow.idenfr);
 	Syntax_Analysis_Main(true, true); // Ident : 함수이름
 
+	curBlock->addSymbol(func_symbol);
+	Block *block1 = new Block(type2, curBlock, curBlock->getLevel() + 1);
+	curBlock->addCBlock(block1);
+	curBlock = block1;
+	cur_func_symbol = func_symbol;
 
 	lastNonTerminalLine = wordNow.lineId;
 	//여기서 레벨업해야지 인자가 한단계 높게 설정된다.
@@ -1669,6 +1752,15 @@ void parseFuncDef()
 
 	parseBlock(true);
 
+	if(codeList[codeList.size()-1].getName()!="RET")
+	{
+		cout << "HELLOEOEJEOJFOEJFOJEOFJEJFO" << endl;
+		Code code1("RET");
+		codeList.push_back(code1);
+	}
+	label->setPoint(address);
+	curBlock = curBlock->getFBlock();
+
 	outputSyntax_Analysis("FuncDef");
 }
 
@@ -1682,6 +1774,9 @@ void parseMainFunc()
 	address = 0;
 	func_symbol->setStartCode(codeList.size());
 	func_symbol->setName("main");
+	Label *label = new Label();
+	Code code("INT_L", label);
+	codeList.push_back(code);
 
 	curBlock->addSymbol(func_symbol);
 	Block* block1 = new Block("int", curBlock, curBlock->getLevel()+1);
@@ -1690,9 +1785,6 @@ void parseMainFunc()
 	cur_func_symbol = func_symbol;
 
 	// 11
-	Label *label = new Label();
-	Code code("INT_L", label);
-	codeList.push_back(code);
 
 
 	Syntax_Analysis_Main(true, true); // int
@@ -1706,6 +1798,7 @@ void parseMainFunc()
 
 	// 22
 	label->setPoint(address);
+	curBlock = curBlock->getFBlock();
 
 	outputSyntax_Analysis("MainFuncDef");
 }
@@ -1719,26 +1812,25 @@ void parseCompUnit()
 	string temp3 = wordNow.label;
 	Syntax_Analysis_Main(false, false);
 	Syntax_Analysis_Main(false, false);
+	flag = 0;
 	// 메인 함수라면
 	if(temp1=="INTTK"&&isMain=="MAINTK")
 	{
 		//11
-		Label label;
-		Code code1("JTM", &label);
+		Label *label = new Label();
+		Code code1("JTM", label);
 		codeList.push_back(code1);
 		isMainFunc = true;
 
 		currentFunctionType = INT;
 		parseMainFunc();
+		label->setPoint(cur_func_symbol->getStartCode());
 		outputSyntax_Analysis("CompUnit");
 		return;
 	}
 	// 함수라면
 	else if((temp1=="VOIDTK"&&temp3=="LPARENT")||(temp1=="INTTK"&&temp3=="LPARENT"))
 	{
-		//11
-		/* Label label;
-		code[codeAt] = {"JTM", 0, 0, 0, label, 0}; */
 
 		if(temp1=="VOIDTK")
 			currentFunctionType = VOID;
@@ -1751,6 +1843,7 @@ void parseCompUnit()
 	// 전역 변수라면
 	else
 	{
+		flag = 1;
 		parseDecl();
 		parseCompUnit();
 	}
@@ -2163,6 +2256,9 @@ int main(void) {
 	vector<string> interpret = interpreter.interpret();
 	/* cout << interpret[0]; */
 	interpreter.outputPCode(interpret);
+
+	delete cur_func_symbol;
+	delete curBlock;
 
 	fclose(inputFile);
 	inFile.close();
