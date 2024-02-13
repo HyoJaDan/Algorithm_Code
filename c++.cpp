@@ -873,6 +873,7 @@ int unaryExp(int type){
 	Syntax_Analysis_Main(false, false);
 	string op;
 
+	//UnaryOp UnaryExp
 	if (wordNow.label == "PLUS" || wordNow.label == "MINU" || wordNow.label == "NOT")
 	{
 		op = wordNow.label;
@@ -885,13 +886,19 @@ int unaryExp(int type){
 			Code code1("MINU");
 			codeList.push_back(code1);
 		}
-	}
+	}//Ident ([FuncRParams])
 	else if(wordNow.label=="IDENFR"&&temp=="(")
 	{
 		//  Ident '(' [FuncParams] ');
 		//error handeler
 		lastNonTerminalLine = wordNow.lineId;
 		parseErrorC(wordNow.idenfr, wordNow.lineId); // error c
+
+		//22
+		string func_name = wordNow.idenfr;
+		Symbol *symbol = curBlock->search(func_name);
+		Code code1("INT", 3);
+		codeList.push_back(code1);
 
 		FuncInfo funcInfo = getFuncInfo(wordNow.idenfr);
 		Syntax_Analysis_Main(true, true); // Ident(함수명) 출력
@@ -911,8 +918,14 @@ int unaryExp(int type){
 				parseFuncRParams(funcInfo);
 			}
 		}
-        //원래 함수에는 인자가 있는데 지금은 )인 경우
-        else if (funcInfo.paramNum > 0 && wordNow.idenfr == ")")
+		Code code2("DOWN", 3 + dynamic_cast<Func_symbol*>(symbol)->getParams().size());
+		codeList.push_back(code2);
+		
+		Code code3("CAL",dynamic_cast<Func_symbol*>(symbol)->getStartCode());
+		codeList.push_back(code3);
+
+		// 원래 함수에는 인자가 있는데 지금은 )인 경우
+		if (funcInfo.paramNum > 0 && wordNow.idenfr == ")")
             error(wordNow.lineId, "d");
 		// ()가 잘 닫히는지 확인하는 오류. 함수에서 )까지 출력한다.
 		parseErrorJ();
@@ -1696,27 +1709,30 @@ void parseFuncFParams()
 // 나머지 함수일때 사용
 void parseFuncDef()
 {
-	//22
+	// 22
+	// func_symbol 선언, 주소 3으로 초기화, 시작 코드는 codeList.size();
 	Func_symbol *func_symbol = new Func_symbol("", 0);
 	address = 3;
 	func_symbol->setStartCode(codeList.size());
+	// Label codeList에 넣기
 	Label *label = new Label();
 	Code code("INT_L", label);
 	codeList.push_back(code);
 
+	//func_symbol.dim에 값 넣기
 	int type;
 	string type2;
 	if (wordNow.idenfr == "void")
 	{
 		type = VOID;
 		type2 = "void";
-		func_symbol->setDim(0);
+		func_symbol->setDim(-1);
 	}
 	else if(wordNow.idenfr=="int")
 	{
 		type = INT;
 		type2 = "int";
-		func_symbol->setDim(-1);
+		func_symbol->setDim(0);
 	}
 
 	Syntax_Analysis_Main(true, true); // void, int 구분할 필요가 없는게 return에서 차피 구분하게 만들어놓음
@@ -1728,9 +1744,11 @@ void parseFuncDef()
 	{
 		symbolTable[++symbolTableTop] = Symbol22{ wordNow.idenfr, FUNC, type, levelNow };
 	}
+	// func_symbol.name에 값 넣기
 	func_symbol->setName(wordNow.idenfr);
 	Syntax_Analysis_Main(true, true); // Ident : 함수이름
 
+	//
 	curBlock->addSymbol(func_symbol);
 	Block *block1 = new Block(type2, curBlock, curBlock->getLevel() + 1);
 	curBlock->addCBlock(block1);
@@ -1803,58 +1821,47 @@ void parseMainFunc()
 	outputSyntax_Analysis("MainFuncDef");
 }
 
+
 void parseCompUnit()
 {
-	string temp1 = wordNow.label;
-	Syntax_Analysis_Main(true, false);
-	string isMain = wordNow.label;
-	Syntax_Analysis_Main(true, false);
-	string temp3 = wordNow.label;
-	Syntax_Analysis_Main(false, false);
-	Syntax_Analysis_Main(false, false);
-	flag = 0;
-	// 메인 함수라면
-	if(temp1=="INTTK"&&isMain=="MAINTK")
+	// 전역 변수라면
+	flag = 1;
+	while (wordList[wordCnt-1].label == "CONSTTK" || (wordList[wordCnt-1].label == "INTTK" && wordList[wordCnt].label == "IDENFR" && wordList[wordCnt+1].label != "LPARENT"))
 	{
-		//11
-		Label *label = new Label();
-		Code code1("JTM", label);
-		codeList.push_back(code1);
-		isMainFunc = true;
-
-		currentFunctionType = INT;
-		parseMainFunc();
-		label->setPoint(cur_func_symbol->getStartCode());
-		outputSyntax_Analysis("CompUnit");
-		return;
+		parseDecl();
 	}
+	flag = 1;
+	Label *label = new Label();
+	Code code1("JTM", label);
+	codeList.push_back(code1);
 	// 함수라면
-	else if((temp1=="VOIDTK"&&temp3=="LPARENT")||(temp1=="INTTK"&&temp3=="LPARENT"))
+	flag = 0;
+	while ((wordList[wordCnt-1].label == "VOIDTK" && wordList[wordCnt+1].label == "LPARENT") || (wordList[wordCnt-1].label == "INTTK" && wordList[wordCnt].label == "IDENFR" && wordList[wordCnt+1].label == "LPARENT"))
 	{
-
-		if(temp1=="VOIDTK")
+		if(wordList[wordCnt].label=="VOIDTK")
 			currentFunctionType = VOID;
-		else if(temp1=="INTTK")
+		else if(wordList[wordCnt].label=="INTTK")
 			currentFunctionType = INT;
 
 		parseFuncDef();
-		parseCompUnit();
 	}
-	// 전역 변수라면
-	else
+	// 메인 함수라면
+	if (wordList[wordCnt-1].label == "INTTK" && wordList[wordCnt].label == "MAINTK" && wordList[wordCnt+1].label == "LPARENT")
 	{
-		flag = 1;
-		parseDecl();
-		parseCompUnit();
+		//11
+		isMainFunc = true;
+		currentFunctionType = INT;
+
+		parseMainFunc();
+		outputSyntax_Analysis("CompUnit");
 	}
+	label->setPoint(cur_func_symbol->getStartCode());
 }
 
 void Syntax_Analysis(){
 	wordCnt = 0;
-	if (Syntax_Analysis_Main(true, true))
-	{
-		parseCompUnit();
-	}
+	wordNow = wordList[wordCnt++];
+	parseCompUnit();
 }
 
 string toLowerCase(string in)
@@ -2240,8 +2247,8 @@ public:
 	{
 		for (int i = 0; i < interpret.size();i++)
 		{
-			cout << interpret[i] << endl;
-			pcodeOut << interpret[i] << endl;
+			cout << interpret[i];
+			pcodeOut << interpret[i];
 		}
 	}
 };
@@ -2257,8 +2264,8 @@ int main(void) {
 	/* cout << interpret[0]; */
 	interpreter.outputPCode(interpret);
 
-	delete cur_func_symbol;
-	delete curBlock;
+	/* delete cur_func_symbol;
+	delete curBlock; */
 
 	fclose(inputFile);
 	inFile.close();

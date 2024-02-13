@@ -1,52 +1,4 @@
 INTTK int
-<FuncType>
-IDENFR func
-LPARENT (
-INTTK int
-IDENFR a
-<FuncFParam>
-COMMA ,
-INTTK int
-IDENFR b
-<FuncFParam>
-<FuncFParams>
-RPARENT )
-LBRACE {
-INTTK int
-IDENFR c
-ASSIGN =
-IDENFR a
-<LVal>
-<PrimaryExp>
-<UnaryExp>
-<MulExp>
-<AddExp>
-PLUS +
-IDENFR b
-<LVal>
-<PrimaryExp>
-<UnaryExp>
-<MulExp>
-<AddExp>
-<Exp>
-<InitVal>
-<VarDef>
-SEMICN ;
-<VarDecl>
-RETURNTK return
-IDENFR c
-<LVal>
-<PrimaryExp>
-<UnaryExp>
-<MulExp>
-<AddExp>
-<Exp>
-SEMICN ;
-<Stmt>
-RBRACE }
-<Block>
-<FuncDef>
-INTTK int
 MAINTK main
 LPARENT (
 RPARENT )
@@ -79,10 +31,7 @@ INTCON 20
 <VarDef>
 SEMICN ;
 <VarDecl>
-INTTK int
-IDENFR c
-ASSIGN =
-IDENFR func
+IFTK if
 LPARENT (
 IDENFR a
 <LVal>
@@ -90,37 +39,50 @@ IDENFR a
 <UnaryExp>
 <MulExp>
 <AddExp>
-<Exp>
-COMMA ,
+<RelExp>
+GRE >
 IDENFR b
 <LVal>
 <PrimaryExp>
 <UnaryExp>
 <MulExp>
 <AddExp>
-<Exp>
-<FuncRParams>
+<RelExp>
+<EqExp>
+<LAndExp>
+<LOrExp>
+<Cond>
 RPARENT )
-<UnaryExp>
-<MulExp>
-<AddExp>
-<Exp>
-<InitVal>
-<VarDef>
-SEMICN ;
-<VarDecl>
+LBRACE {
 PRINTFTK printf
 LPARENT (
-STRCON "%d"
-COMMA ,
-IDENFR c
-<LVal>
+STRCON "true"
+RPARENT )
+SEMICN ;
+<Stmt>
+RBRACE }
+<Block>
+<Stmt>
+ELSETK else
+LBRACE {
+PRINTFTK printf
+LPARENT (
+STRCON "false"
+RPARENT )
+SEMICN ;
+<Stmt>
+RBRACE }
+<Block>
+<Stmt>
+<Stmt>
+RETURNTK return
+INTCON 0
+<Number>
 <PrimaryExp>
 <UnaryExp>
 <MulExp>
 <AddExp>
 <Exp>
-RPARENT )
 SEMICN ;
 <Stmt>
 RBRACE }
