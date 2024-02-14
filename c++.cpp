@@ -366,24 +366,6 @@ public:
     void setType(string type) {
         this->type = type;
     }
-
-    /* void show() {
-        cout << "------------------" << type << "----------------------\n";
-        cout << "level: " << level << "\n";
-        for (Symbol* symbol : SymbolTable) {
-            cout << symbol->getName() << "   dim: " << symbol->getDim() << "   dim1: " << symbol->getDim1()
-                      << "   dim2: " << symbol->getDim2() << "  type: " << symbol->getType()
-                      << "  address: " << symbol->getAddress() << "  global: " << symbol->isGlobal() << "\n";
-            if (symbol->isConst()) {
-                symbol->show_value();
-            } else if(symbol->getName() == "func"){
-                dynamic_cast<Func_symbol*>(symbol)->show();
-            }
-        }
-        for (Block* cblock : CBlock) {
-            cblock->show();
-        }
-    } */
 };
 
 class Param_symbol : public Symbol {
@@ -480,7 +462,7 @@ public:
         setConst(true);
     }
 
-    void setType(std::string type) {
+    void setType(string type) {
         this->type = type;
     }
 
@@ -497,12 +479,50 @@ public:
     }
 };
 
+class Record {
+private:
+    int retValue;
+
+public:
+    Record(int retValue)
+        :  retValue(retValue) {}
+
+    int getRetValue() {
+        return retValue;
+    }
+
+    void setRetValue(int retValue) {
+        this->retValue = retValue;
+    }
+};
+
+
+class RecordValue {
+private:
+    vector<int> values;
+
+public:
+    RecordValue(vector<int> values)
+        : values(values) {}
+
+    void setValues(vector<int> values) {
+        this->values = values;
+    }
+
+    vector<int> getValues() {
+        return values;
+    }
+};
+Record ExpValue();
+Record LValValue();
 int level = 1;
 Block *curBlock = new Block("global", NULL, level);
 Func_symbol *cur_func_symbol = NULL;
 int address = 0;
 bool isMainFunc = false;
+bool isIntFunc = false;
 int flag = 0;
+bool need_lods = true;
 /////////////////
 
 void insertWordList(string label, string idenfr)
@@ -827,7 +847,7 @@ int Syntax_Analysis_Main(bool forward, bool withOutput = false)
 		return 1;
 	}
 }
-//PrimaryExp → '(' Exp ')' | LVal | Number 
+
 int primaryExp(int type){
 	// 1. (EXP)
 	if(wordNow.idenfr=="(")
@@ -850,16 +870,54 @@ int primaryExp(int type){
 		// 3. LVal
 		else 
 		{
-			type=parseLVal(type);
+			need_lods = true;
+			type = parseLVal(type);
 			//11
-			// if(need_loads)??
-			Code code1("LODS");
-			codeList.push_back(code1);
+			if(need_lods){
+				Code code1("LODS");
+				codeList.push_back(code1);
+			}
 		}
 	}
 	outputSyntax_Analysis("PrimaryExp");
 
 	return type;
+}
+
+Record PrimaryExpValue(){
+	Record *record = new Record(0);
+	int value;
+	int midValue;
+
+	if(wordNow.idenfr=="(")
+	{
+		Syntax_Analysis_Main(true, true); //'('출력
+		Record record1 = ExpValue();
+		value = record1.getRetValue();
+		record->setRetValue(value);
+		Syntax_Analysis_Main(true, true); //') 출력
+	}
+	else
+	{
+		// 2. number
+		if(wordNow.idenfr[0]>='0'&&wordNow.idenfr[0]<='9')
+		{
+			//11
+			value = stoi(wordNow.idenfr);
+			record->setRetValue(value);
+			Syntax_Analysis_Main(true, true);
+			outputSyntax_Analysis("Number");
+		}
+		// 3. LVal
+		else 
+		{
+			Record record2 = LValValue();
+			value = record2.getRetValue();
+			record->setRetValue(value);
+		}
+	}
+	outputSyntax_Analysis("PrimaryExp");
+	return *record;
 }
 
 void unaryOP(){
@@ -885,6 +943,11 @@ int unaryExp(int type){
 		{
 			Code code1("MINU");
 			codeList.push_back(code1);
+		}
+		else if(op=="NOT")
+		{
+			Code code2("NOT");
+			codeList.push_back(code2);
 		}
 	}//Ident ([FuncRParams])
 	else if(wordNow.label=="IDENFR"&&temp=="(")
@@ -936,6 +999,47 @@ int unaryExp(int type){
 	return type;
 }
 
+Record UnaryExpValue() {
+	string op;
+	int midValue;
+	int value = 0;
+	Record *record = new Record(0);
+
+	Syntax_Analysis_Main(true, false);
+	string temp = wordNow.idenfr;
+	Syntax_Analysis_Main(false, false);
+
+	//UnaryOp UnaryExp
+	if (wordNow.label == "PLUS" || wordNow.label == "MINU" || wordNow.label == "NOT")
+	{
+		op = wordNow.label;
+		unaryOP();
+
+		Record record1 = UnaryExpValue();
+		midValue = record1.getRetValue();
+
+		//22
+		if(op=="PLUS")
+		{
+			value = midValue;
+		}
+		else if(op=="MINU")
+		{
+			value = -1 * midValue;
+		}
+		record->setRetValue(value);
+		outputSyntax_Analysis("UnaryExp");
+	} // Ident ([FuncRParams])
+	else if (wordNow.label == "IDENFR" || wordNow.label == "LPARENT" || wordNow.label == "INTCON")
+	{
+		Record record1 = PrimaryExpValue();
+        value = record1.getRetValue();
+        outputSyntax_Analysis("UnaryExp");
+        record->setRetValue(value);
+	}
+	return *record;
+}
+
 int mulExp(int type){
 	type = unaryExp(type);
 	
@@ -945,6 +1049,7 @@ int mulExp(int type){
 		string op = wordNow.label;
 		Syntax_Analysis_Main(true, true);
 		type=mulExp(type);
+
 		if(op=="MULT")
 		{
 			Code code1("MUL");
@@ -964,6 +1069,44 @@ int mulExp(int type){
 	return type;
 }
 
+
+Record mulExpValue(){
+    Record *record = new Record(0);
+    int value;
+    int midValue;
+    string op;
+    Record record1 = UnaryExpValue();
+
+    value = record1.getRetValue();
+	
+	outputSyntax_Analysis("MulExp");
+
+	while (wordNow.label == "MULT" || wordNow.label == "DIV" || wordNow.label == "MOD")
+	{
+		op = wordNow.label;
+		Syntax_Analysis_Main(true, true);
+		Record record2 = UnaryExpValue();
+		
+        midValue = record2.getRetValue();
+
+		if(op=="MULT")
+		{
+			value = value * midValue;
+		}
+		else if(op=="DIV")
+		{
+			value = value / midValue;
+		}
+		else if(op=="MOD")
+		{
+			value = value % midValue;
+		}
+		outputSyntax_Analysis("MulExp");
+	}
+	record->setRetValue(value);
+	return *record;
+}
+
 int addExp(int type){
 	type=mulExp(type);
 	
@@ -973,6 +1116,7 @@ int addExp(int type){
 		string op = wordNow.label;
 		Syntax_Analysis_Main(true, true);
 		type=addExp(type);
+
 		if(op=="PLUS")
 		{
 			Code code1("ADD");
@@ -986,6 +1130,35 @@ int addExp(int type){
 	}
 	return type;
 }
+Record AddExpValue() {
+	Record *record = new Record(0);
+	string op;
+	int value;
+    int midValue;
+    Record record1 = mulExpValue(); 
+    value = record1.getRetValue();
+	
+	outputSyntax_Analysis("AddExp");
+	while (wordNow.label == "PLUS" || wordNow.label == "MINU")
+	{
+		op = wordNow.label;
+		Syntax_Analysis_Main(true, true);
+		Record record2 = mulExpValue();
+
+		midValue = record2.getRetValue();
+		
+		if (op == "PLUS")
+		{
+			value = value + midValue;
+		}
+		else if(op=="MINU")
+		{
+			value = value - midValue;
+		}
+	}
+	record->setRetValue(value);
+	return *record;
+}
 
 int parseExp(){
 	int type = INT;
@@ -995,10 +1168,33 @@ int parseExp(){
 	return type;
 }
 
+Record ExpValue(){
+	Record *record = new Record(0);
+	int value;
+	Record record1 = AddExpValue();
+	value = record1.getRetValue();
+	outputSyntax_Analysis("Exp");
+	record->setRetValue(value);
+	return *record;
+}
+
 void parseConstExp(){
 	addExp(-1);
 
 	outputSyntax_Analysis("ConstExp");
+}
+
+Record constExpValue(){
+	Record *record=new Record(0);
+	int value = 0;
+
+	Record record1 = AddExpValue();
+	value = record1.getRetValue();
+	
+	outputSyntax_Analysis("ConstExp");
+	record->setRetValue(value);
+
+	return *record;
 }
 
 // < > <= >=
@@ -1009,8 +1205,31 @@ void parseRelExp()
 	outputSyntax_Analysis("RelExp");
 	if (wordNow.idenfr == "<" || wordNow.idenfr == "<=" || wordNow.idenfr == ">" || wordNow.idenfr == ">=")
 	{
+		string op = wordNow.idenfr;
 		Syntax_Analysis_Main(true, true); // < > <= >=
 		parseRelExp();
+
+		//22
+		if(op==">")
+		{
+			Code code1("BGT");
+			codeList.push_back(code1);
+		}
+		else if(op==">=")
+		{
+			Code code2("BGE");
+			codeList.push_back(code2);
+		}
+		else if(op=="<")
+		{
+			Code code3("BLT");
+			codeList.push_back(code3);
+		}
+		else if(op=="<=")
+		{
+			Code code4("BLE");
+			codeList.push_back(code4);
+		}
 	}
 }
 
@@ -1018,10 +1237,23 @@ void parseEqExp()
 {
 	parseRelExp();
 	outputSyntax_Analysis("EqExp");
+
 	if (wordNow.idenfr == "!=" || wordNow.idenfr == "==")
 	{
+		string op = wordNow.idenfr;
 		Syntax_Analysis_Main(true, true); // == !=
 		parseEqExp();
+
+		if(op=="==")
+		{
+			Code code1("BEQ");
+			codeList.push_back(code1);
+		}
+		else if(op=="!=")
+		{
+			Code code2("BNE");
+			codeList.push_back(code2);
+		}
 	}
 }
 
@@ -1033,7 +1265,16 @@ void parseLAndExp()
 	if (wordNow.label == "AND")
 	{
 		Syntax_Analysis_Main(true, true); // &&
+
+		//22
+		Label *label = new Label();
+		Code code1("JP0", label);
+		codeList.push_back(code1);
+		Code code2("DOWN", 1);
+		codeList.push_back(code2);
+
 		parseLAndExp();
+		label->setPoint(codeList.size());
 	}
 }
 
@@ -1045,7 +1286,15 @@ void parseLOrExp()
 	if (wordNow.label == "OR")
 	{
 		Syntax_Analysis_Main(true, true); // ||
+		//22
+		Label *label = new Label();
+		Code code1("JP1", label);
+		codeList.push_back(code1);
+		Code code2("DOWN", 1);
+		codeList.push_back(code2);
+
 		parseLOrExp();
+		label->setPoint(codeList.size());
 	}
 }
 
@@ -1057,19 +1306,34 @@ void parseCond(){
 
 void parseIf()
 {
+	//22
+	Label *label1 = new Label();
+	Label *label2 = new Label();
+	
 	lastNonTerminalLine = wordNow.lineId;
 	Syntax_Analysis_Main(true, true); //if
 	Syntax_Analysis_Main(true, true); //(
 	parseCond();
-	//if하고 {가 같은 줄에 있으면 이거, 다음 줄에 있으면 -1을 해야함.
-	// ()가 잘 닫히는지 확인하는 오류. 함수에서 )까지 출력한다.
+
+	Code code1("BZT", label1);
+	codeList.push_back(code1);
+	// if하고 {가 같은 줄에 있으면 이거, 다음 줄에 있으면 -1을 해야함.
+	//  ()가 잘 닫히는지 확인하는 오류. 함수에서 )까지 출력한다.
 	parseErrorJ();
 	parseStmt();
 	if(wordNow.label=="ELSETK")
 	{
-		
 		Syntax_Analysis_Main(true, true); //else
+
+		Code code2("J", label2);
+		codeList.push_back(code2);
+		label1->setPoint(codeList.size());
+
 		parseStmt();
+
+		label2->setPoint(codeList.size());
+	}else{
+		label1->setPoint(codeList.size());
 	}
 }
 
@@ -1124,8 +1388,11 @@ void parseReadStmt()
 void parseReturnStmt()
 {
 	//22
-	Code code1("LDA", 0, 0);
-	codeList.push_back(code1);
+	if(isIntFunc)
+	{
+		Code code1("LDA", 0, 0);
+		codeList.push_back(code1);
+	}
 
 	isReturnCalled = true;
 	Syntax_Analysis_Main(true, true); // return 출력
@@ -1138,8 +1405,11 @@ void parseReturnStmt()
 		parseExp();
 	}
 	//22
-	Code code2("STOS");
-	codeList.push_back(code2);
+	if(isIntFunc)
+	{
+		Code code2("STOS");
+		codeList.push_back(code2);
+	}
 	if(isMainFunc)
 	{
 		Code code3("RET_TO_END");
@@ -1190,7 +1460,9 @@ void parsePrint()
 
 int parseLVal(int type)
 {
-	//error handeler getType은 선언됐던 타입이 나옴. 
+	int dim = 0;
+	int arrNum = 0;//cishu
+	// error handeler getType은 선언됐던 타입이 나옴.
 	int getType = parseErrorC(wordNow.idenfr, wordNow.lineId);
 	if(getType!=-1)
 		type = getType;
@@ -1198,8 +1470,7 @@ int parseLVal(int type)
 	//22
 	string lval_name = wordNow.idenfr;
 	Symbol *symbol = curBlock->search(lval_name);
-
-	int arrNum = 0;
+	dim = symbol->getDim();
 	Syntax_Analysis_Main(true, true); // IDent 출력;
 	while(wordNow.idenfr=="[")
 	{
@@ -1207,6 +1478,12 @@ int parseLVal(int type)
 
 		Syntax_Analysis_Main(true, true); //[ 출력
 		parseExp();
+		if (arrNum == 1 && dim == 2){
+			Code code1("LDC", symbol->getDim1());
+			Code code2("MUL");
+			codeList.push_back(code1);
+			codeList.push_back(code2);
+		}
 
 		// k error : ]가 있는지 없는지 확인후 있으면 ] 출력
 		parseErrorK();
@@ -1224,12 +1501,111 @@ int parseLVal(int type)
 		//만약 3차원 배열이 나오면, 그대로 type=arrNum의 갯수대로 간다.
 	}
 	//여기 보완해야할거 씹많음
-	
-	int isGlobal = symbol->getIsGlobal() ? 1 : 0; // ??
-	Code code1("LDA", isGlobal, symbol->getAddress());
-	codeList.push_back(code1);
+	if(symbol!=NULL){
+		int isGlobal = symbol->getIsGlobal() ? 1 : 0; // 
+		if(symbol->getDim()==0){
+			Code code1("LDA", isGlobal, symbol->getAddress());
+			codeList.push_back(code1);
+		}
+		else if (symbol->getDim() == 1 && arrNum == 1)
+		{
+			if(symbol->getType()=="param"){
+				Code code1("LOD", isGlobal, symbol->getAddress());
+				codeList.push_back(code1);
+			}else{
+				Code code1("LDA", isGlobal, symbol->getAddress());
+				codeList.push_back(code1);
+			}
+			Code code2("ADD");
+			codeList.push_back(code2);
+		}
+		else if (symbol->getDim() == 2 && arrNum == 2){
+			if(symbol->getType()=="param"){
+				Code code1("LOD", isGlobal, symbol->getAddress());
+				codeList.push_back(code1);
+			}else{
+				Code code1("LDA", isGlobal, symbol->getAddress());
+				codeList.push_back(code1);
+			}
+			Code code2("ADD");
+			Code code3("ADD");
+			codeList.push_back(code2);
+			codeList.push_back(code3);
+		}
+		else if (arrNum == 0 && (dim == 1 || dim == 2))
+		{
+			if(symbol->getType()=="param"){
+				Code code1("LOD", isGlobal, symbol->getAddress());
+				codeList.push_back(code1);
+			}else{
+				Code code1("LDA", isGlobal, symbol->getAddress());
+				codeList.push_back(code1);
+			}
+			need_lods = false;
+		}
+		else if(arrNum==1&&dim==2){
+			if(symbol->getType()=="param"){
+				Code code1("LOD", isGlobal, symbol->getAddress());
+				codeList.push_back(code1);
+			}else{
+				Code code1("LDA", isGlobal, symbol->getAddress());
+				codeList.push_back(code1);
+			}
+			Code code2("ADD");
+			codeList.push_back(code2);
+			need_lods = false;
+		}
+	}
 	outputSyntax_Analysis("LVal");
 	return type;
+}
+
+Record LValValue(){
+	Record *record = new Record(0);
+	int dim1 = 0;
+	int dim2 = 0;
+	int midValue = 0;
+	int dim;
+	int value = 0;
+	
+	int arrNum = 0; //cishu
+	string lval_name = wordNow.idenfr;
+	Symbol *symbol = curBlock->search(lval_name);
+	dim = symbol->getDim();
+
+	Syntax_Analysis_Main(true, true); // IDent 출력;
+	while(wordNow.idenfr=="[")
+	{
+		arrNum++;
+
+		Syntax_Analysis_Main(true, true); //[ 출력
+		Record record1 = ExpValue();
+		midValue = record1.getRetValue();
+		if(arrNum==1 && dim==1){
+			dim = midValue;
+		}
+		else if(arrNum==1&&dim==2){
+			dim2 = midValue;
+		}else if(arrNum==2&&dim==2){
+			dim1 = midValue;
+		}
+
+		// k error : ]가 있는지 없는지 확인후 있으면 ] 출력
+		parseErrorK();
+	}
+	int off = 0;
+	if(dim==0)
+		off = 0;
+	else if(dim==1)
+		off = dim1;
+	else if(dim==2)
+		off = dim2 * symbol->getDim1() + dim1;
+	
+	value = dynamic_cast<Const_symbol*>(symbol)->getValues()[off];
+	record->setRetValue(value);
+	outputSyntax_Analysis("LVal");
+
+	return *record;
 }
 
 void parseStmt()
@@ -1250,6 +1626,7 @@ void parseStmt()
 		if(!isCirculer[levelNow])
 			error(wordNow.lineId, "m");
 
+		/* Code code1("J",) */
 		Syntax_Analysis_Main(true, true);
 
 		//;가 없는지 확인하는 에러. 있으면 ;까지 출력
@@ -1370,41 +1747,59 @@ void parseStmt()
 	outputSyntax_Analysis("Stmt");
 }
 
-void parseConstInitVal()
+RecordValue parseConstInitVal()
 {
-	// 11
-	/* code[codeAt++] = {"INT", 0, 1, "", "", 0};
-	code[codeAt++] = {"LDA", 0, address, "", "", 0};
-	address++;
-	code[codeAt++] = {"LDC", 0, 1, "", "", 0};
-	code[codeAt++] = {"STOS", 0, 0, "", "", 0}; */
+	vector<int> values;
+	RecordValue *recordValue = new RecordValue(values);
 
 	lastNonTerminalLine = wordNow.lineId;
 	if (wordNow.idenfr == "{")
 	{
 		Syntax_Analysis_Main(true, true);
-		if(wordNow.idenfr!="}")
+
+		if (wordNow.idenfr != "}")
 		{
-			parseConstInitVal();
+			RecordValue recordValue1 = parseConstInitVal();
+			values.insert(values.end(), recordValue1.getValues().begin(), recordValue1.getValues().end());
+
 			while(wordNow.idenfr==",")
 			{
 				Syntax_Analysis_Main(true, true);
-				parseConstInitVal();
+				RecordValue recordValue2 = parseConstInitVal();
+				values.insert(values.end(), recordValue2.getValues().begin(), recordValue2.getValues().end());
 			}
 		}
 		Syntax_Analysis_Main(true, true);
 	}
 	else
 	{
-		parseConstExp();
+		Record record = constExpValue();
+		values.push_back(record.getRetValue());
+		int value = record.getRetValue();
+		Code code1("INT", 1);
+		Code code2("LDA", 0, address);
+		address++;
+		Code code3("LDC", value);
+		Code code4("STOS");
+		codeList.push_back(code1);
+		codeList.push_back(code2);
+		codeList.push_back(code3);
+		codeList.push_back(code4);
 	}
 	
 	outputSyntax_Analysis("ConstInitVal");
+	recordValue->setValues(values);
+	return *recordValue;
 }
 
 void parseConstDef()
 {
 	//22
+	int dim1 = 0;
+	int dim2 = 0;
+	int midValue = 0;
+	int numOfArrLayer = 0; // cishu
+
 	Const_symbol *const_symbol = new Const_symbol("", 0);
 	curBlock->addSymbol(const_symbol);
 	const_symbol->setName(wordNow.idenfr);
@@ -1415,29 +1810,43 @@ void parseConstDef()
 		symbolTable[++symbolTableTop] = Symbol22{ wordNow.idenfr, CONST, type, levelNow };
 	}
 	Syntax_Analysis_Main(true, true); //c 출력
-	int numOfArrLayer = 0;
 	while (wordNow.idenfr == "[") // [ (배열)이면
 	{
+		const_symbol->setDim(const_symbol->getDim() + 1);
 		numOfArrLayer++;
 		Syntax_Analysis_Main(true, true); // [
-		parseConstExp(); //숫자
+
+		Record record1 = constExpValue();
+		midValue = record1.getRetValue();
+		if(numOfArrLayer==1){
+			dim1 = midValue;
+		}else if(numOfArrLayer==2){
+			dim2 = dim1;
+			dim1 = midValue;
+		}
 
 		// k error : ]가 있는지 없는지 확인후 있으면 ] 출력
 		parseErrorK();
 	}
+
+	//22
+	const_symbol->setDim1(dim1);
+	const_symbol->setDim2(dim2);
+	const_symbol->setAddress(address);
+	if (flag == 1)
+		const_symbol->setGlobal(true);
+
 	if(numOfArrLayer==1)
 		symbolTable[symbolTableTop].type = ARR1;
 	else if(numOfArrLayer==2)
 		symbolTable[symbolTableTop].type = ARR2;
 
-	//22
-	const_symbol->setAddress(address);
-	if(flag==1)
-		const_symbol->setGlobal(true);
-
 	Syntax_Analysis_Main(true, true); // = 출력
-	parseConstInitVal();
-		
+	
+	//parseConstInitVal();
+	RecordValue RecordValue = parseConstInitVal();
+	const_symbol->setValues(RecordValue.getValues());
+
 	//2
 	outputSyntax_Analysis("ConstDef");
 }
@@ -1497,7 +1906,12 @@ void parseInitVal()
 
 void parseVarDef()
 {
-	Var_symbol* var_symbol = new Var_symbol("", 0);
+	int numOfArrLayer = 0; //cishu와 같다.
+	int midValue = 0;
+	// arr[2][3]이 있으면, dim1=2, dim2=3이다. 이걸 numOfArrLayer로 값 구하고 복사
+	int dim1 = 0;
+	int dim2 = 0;
+	Var_symbol *var_symbol = new Var_symbol("", 0);
 	curBlock->addSymbol(var_symbol);
 	var_symbol->setName(wordNow.idenfr);
 	// error handeler
@@ -1507,20 +1921,43 @@ void parseVarDef()
 		symbolTable[++symbolTableTop] = Symbol22{ wordNow.idenfr, VAR, type, levelNow};
 	}
 	Syntax_Analysis_Main(true, true); //c 출력
-	int numOfArrLayer = 0;
 	while (wordNow.idenfr == "[") // [ (배열)이면
 	{
-		numOfArrLayer++;
 		Syntax_Analysis_Main(true, true); // [
-		parseConstExp(); //숫자
-		
+		numOfArrLayer++;
+		var_symbol->setDim(var_symbol->getDim() + 1);
+
+		/*이거는 arr[2]에서 2를 구할수 없기 떄문에 안쓴다.
+		 parseConstExp(); // 숫자 */
+		Record record1 = constExpValue();
+		//여기서 2를 받는다.
+		midValue = record1.getRetValue();
+		if(numOfArrLayer==1)
+			dim1 = midValue;
+		else if(numOfArrLayer==2)
+		{
+			dim2 = dim1;
+			dim1 = midValue;
+		}
+
 		// k error : ]가 있는지 없는지 확인후 있으면 ] 출력
 		parseErrorK();
 	}
-	// 2
+	// 22
+	var_symbol->setDim1(dim1);
+	var_symbol->setDim2(dim2);
 	var_symbol->setAddress(address);
+	int total = 0;
+	if (var_symbol->getDim() == 0)
+		total = 1;
+	else if (var_symbol->getDim() == 1)
+		total = dim1;
+	else if (var_symbol->getDim() == 2)
+		total = dim1 * dim2;
+		
 	if(flag==1)
 		var_symbol->setGlobal(true);
+
 	if (numOfArrLayer == 1)
 		symbolTable[symbolTableTop].type = ARR1;
 	else if(numOfArrLayer==2)
@@ -1531,6 +1968,17 @@ void parseVarDef()
 	{
 	    Syntax_Analysis_Main(true, true); // = 출력
 		parseInitVal();
+	}
+	else{
+		Code code1("INT", 1);
+		Code code2("LDA", 0, address);
+		address++;
+		Code code3("LDC", 0);
+		Code code4("STOS");
+		codeList.push_back(code1);
+		codeList.push_back(code2);
+		codeList.push_back(code3);
+		codeList.push_back(code4);
 	}
 
 	outputSyntax_Analysis("VarDef");
@@ -1664,6 +2112,8 @@ void parseFuncFParam()
 	int numOfArrLayer = 0;
 	if (wordNow.idenfr == "[") // [ 라면, 즉 배열이라면
 	{
+		param_symbol->setDim(1);
+		param_symbol->setDim1(0);
 		numOfArrLayer++;
 		Syntax_Analysis_Main(true, true); // 배열 [
 
@@ -1673,9 +2123,14 @@ void parseFuncFParam()
         //2 혹은 3,4,5,6...
 		while(wordNow.idenfr=="[") // [
 		{
+			param_symbol->setDim(2);
 			numOfArrLayer++;
 			Syntax_Analysis_Main(true, true); // [
-			parseConstExp();
+			//parseConstExp();
+			Record record1 = constExpValue();
+			midvalue = record1.getRetValue();
+			param_symbol->setDim2(0);
+			param_symbol->setDim1(midvalue);
 
 			// k error : ]가 있는지 없는지 확인후 있으면 ] 출력
 			parseErrorK();
@@ -1772,7 +2227,6 @@ void parseFuncDef()
 
 	if(codeList[codeList.size()-1].getName()!="RET")
 	{
-		cout << "HELLOEOEJEOJFOEJFOJEOFJEJFO" << endl;
 		Code code1("RET");
 		codeList.push_back(code1);
 	}
@@ -1839,9 +2293,15 @@ void parseCompUnit()
 	while ((wordList[wordCnt-1].label == "VOIDTK" && wordList[wordCnt+1].label == "LPARENT") || (wordList[wordCnt-1].label == "INTTK" && wordList[wordCnt].label == "IDENFR" && wordList[wordCnt+1].label == "LPARENT"))
 	{
 		if(wordList[wordCnt].label=="VOIDTK")
+		{
 			currentFunctionType = VOID;
+			isIntFunc = false;
+		}
 		else if(wordList[wordCnt].label=="INTTK")
+		{
 			currentFunctionType = INT;
+			isIntFunc = true;
+		}
 
 		parseFuncDef();
 	}
@@ -2057,8 +2517,11 @@ void outputError()
 		errorOut << errorList[i].lineId << " " << errorList[i].errType << endl;
 	}
 }
+vector<string> inputValue;
+int curretInputValue = 0;
 
-class Interpreter {
+class Interpreter
+{
 private:
 	int dstack[10000] = {0};
 	int BAddr = 0;
@@ -2072,7 +2535,7 @@ public:
         while (at < codeList.size()) {
             Code curCode = codeList[at];
 			
-            cout << curCode.getName() << "\n";
+            cout << curCode.getName() <<"  : "<< at<< "\n";
             cout << "code.getLevel() = " << curCode.getLevel() << "\n";
             cout << "code.getAddr() = " << curCode.getAddr() << "\n";
             cout << "code.getPrint() = " << curCode.getPrint() << "\n";
@@ -2164,11 +2627,10 @@ public:
 				at++;
 			}
 			else if (curCode.getName() == "GET")
-			{
-				int value;
-				cin >> value;
+			{	
 				sp++;
-				dstack[sp] = value;
+				dstack[sp] = stoi(inputValue[curretInputValue++]);
+				cout << "________________" << dstack[sp]<<endl;
 				at++;
 			}
 			else if (curCode.getName() == "PRF")
@@ -2191,7 +2653,7 @@ public:
 				at++;
 				// 문자열 내의 모든 "\\n"을 "\n"으로 교체해 줄바꿈 문자를 처리합니다.
 				size_t pos = 0;
-				while ((pos = s.find("\\n", pos)) != std::string::npos)
+				while ((pos = s.find("\\n", pos)) != string::npos)
 				{
 					s.replace(pos, 2, "\n");
 					pos += 1;
@@ -2227,10 +2689,62 @@ public:
 				sp += curCode.getLabel()->getPoint();
 				at++;
 			}
-			else
-			{
+			else if (curCode.getName() == "BGT") {
+				sp--;
+				dstack[sp] = (dstack[sp] > dstack[sp + 1]) ? 1 : 0;
+				at++;
+			} else if (curCode.getName() == "BGE") {
+				sp--;
+				dstack[sp] = (dstack[sp] >= dstack[sp + 1]) ? 1 : 0;
+				at++;
+			} else if (curCode.getName() == "BLT") {
+				sp--;
+				dstack[sp] = (dstack[sp] < dstack[sp + 1]) ? 1 : 0;
+				at++;
+			} else if (curCode.getName() == "BLE") {
+				sp--;
+				dstack[sp] = (dstack[sp] <= dstack[sp + 1]) ? 1 : 0;
+				at++;
+			} else if (curCode.getName() == "BEQ") {
+				sp--;
+				dstack[sp] = (dstack[sp] == dstack[sp + 1]) ? 1 : 0;
+				at++;
+			} else if (curCode.getName() == "BNE") {
+				sp--;
+				dstack[sp] = (dstack[sp] != dstack[sp + 1]) ? 1 : 0;
+				at++;
+			} else if (curCode.getName() == "BZT") {
+				if (dstack[sp] == 0) {
+					at = curCode.getLabel()->getPoint();
+				} else {
+					at++;
+				}
+				sp--;
+			} else if (curCode.getName() == "J") {
+				at = curCode.getLabel()->getPoint();
+			} else if (curCode.getName() == "JP0") {
+				if (dstack[sp] == 0) {
+					at = curCode.getLabel()->getPoint();
+				} else {
+					at++;
+				}
+			} else if (curCode.getName() == "JP1") {
+				if (dstack[sp] == 1) {
+					at = curCode.getLabel()->getPoint();
+				} else {
+					at++;
+				}
+			} else if (curCode.getName() == "NOT") {
+				if (dstack[sp] == 0) {
+					dstack[sp] = 1;
+				} else {
+					dstack[sp] = 0;
+				}
+				at++;
+			} else {
 				at++;
 			}
+
 
 			for (int i=0; i < 10; i++) {
                 cout << dstack[i] << " ";
@@ -2252,6 +2766,13 @@ public:
 		}
 	}
 };
+void inputInputTxtFile()
+{
+	string line;
+	while(getline(inFile,line)){
+		inputValue.push_back(line);
+	}
+}
 int main(void) {
     init(); 
     Lexical_Analysis();
@@ -2259,6 +2780,7 @@ int main(void) {
     outputError();
 
 	cout << "=====================================" << endl;
+	inputInputTxtFile();
 	Interpreter interpreter;
 	vector<string> interpret = interpreter.interpret();
 	/* cout << interpret[0]; */
