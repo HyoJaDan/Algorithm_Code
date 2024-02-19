@@ -32,7 +32,6 @@ void parseErrorJ();
 void parseErrorK();
 
 FILE *inputFile;
-ifstream inFile("input.txt");
 ofstream fout("output.txt");
 ofstream errorOut("error.txt");
 ofstream pcodeOut("pcoderesult.txt");
@@ -334,7 +333,7 @@ public:
     vector<Symbol*> getSymbolTable() {
         return SymbolTable;
     }
-
+	
     bool isReturnTk() {
         return returnTk;
     }
@@ -346,7 +345,6 @@ public:
     string getType() {
         return type;
     }
-
     void setBlockItems(vector<Symbol*> blockItems) {
         this->SymbolTable = blockItems;
     }
@@ -523,6 +521,9 @@ bool isMainFunc = false;
 bool isIntFunc = false;
 int flag = 0;
 bool need_lods = true;
+int isFor = 0;
+vector<Label*> forLabel1;
+vector<Label*> forLabel2;
 /////////////////
 
 void insertWordList(string label, string idenfr)
@@ -786,7 +787,7 @@ void Lexical_Analysis_Main() {
 		token += inputedString[wordCnt++];
 		bool isAlreadyError = false;
 		while (inputedString[wordCnt] != '\"')
-		{
+		{ 
 			char ch = inputedString[wordCnt];
 			parseErrorA(ch, isAlreadyError);
 			token += inputedString[wordCnt];
@@ -1044,11 +1045,11 @@ int mulExp(int type){
 	type = unaryExp(type);
 	
 	outputSyntax_Analysis("MulExp");
-	if (wordNow.label == "MULT" || wordNow.label == "DIV" || wordNow.label == "MOD")
+	while (wordNow.label == "MULT" || wordNow.label == "DIV" || wordNow.label == "MOD")
 	{
 		string op = wordNow.label;
 		Syntax_Analysis_Main(true, true);
-		type=mulExp(type);
+		type=unaryExp(type);
 
 		if(op=="MULT")
 		{
@@ -1065,6 +1066,7 @@ int mulExp(int type){
 			Code code1("MOD");
 			codeList.push_back(code1);
 		}
+		outputSyntax_Analysis("MulExp");
 	}
 	return type;
 }
@@ -1111,11 +1113,11 @@ int addExp(int type){
 	type=mulExp(type);
 	
 	outputSyntax_Analysis("AddExp");
-	if (wordNow.label == "PLUS" || wordNow.label == "MINU")
+	while (wordNow.label == "PLUS" || wordNow.label == "MINU")
 	{
 		string op = wordNow.label;
 		Syntax_Analysis_Main(true, true);
-		type=addExp(type);
+		type=mulExp(type);
 
 		if(op=="PLUS")
 		{
@@ -1127,6 +1129,7 @@ int addExp(int type){
 			Code code1("SUB");
 			codeList.push_back(code1);
 		}
+		outputSyntax_Analysis("AddExp");
 	}
 	return type;
 }
@@ -1203,11 +1206,11 @@ void parseRelExp()
 	addExp(-1);
 
 	outputSyntax_Analysis("RelExp");
-	if (wordNow.idenfr == "<" || wordNow.idenfr == "<=" || wordNow.idenfr == ">" || wordNow.idenfr == ">=")
+	while (wordNow.idenfr == "<" || wordNow.idenfr == "<=" || wordNow.idenfr == ">" || wordNow.idenfr == ">=")
 	{
 		string op = wordNow.idenfr;
 		Syntax_Analysis_Main(true, true); // < > <= >=
-		parseRelExp();
+		addExp(-1);
 
 		//22
 		if(op==">")
@@ -1230,6 +1233,7 @@ void parseRelExp()
 			Code code4("BLE");
 			codeList.push_back(code4);
 		}
+		outputSyntax_Analysis("RelExp");
 	}
 }
 
@@ -1238,11 +1242,11 @@ void parseEqExp()
 	parseRelExp();
 	outputSyntax_Analysis("EqExp");
 
-	if (wordNow.idenfr == "!=" || wordNow.idenfr == "==")
+	while (wordNow.idenfr == "!=" || wordNow.idenfr == "==")
 	{
 		string op = wordNow.idenfr;
 		Syntax_Analysis_Main(true, true); // == !=
-		parseEqExp();
+		parseRelExp();
 
 		if(op=="==")
 		{
@@ -1254,6 +1258,7 @@ void parseEqExp()
 			Code code2("BNE");
 			codeList.push_back(code2);
 		}
+		outputSyntax_Analysis("EqExp");
 	}
 }
 
@@ -1262,7 +1267,7 @@ void parseLAndExp()
 	parseEqExp();
 
 	outputSyntax_Analysis("LAndExp");
-	if (wordNow.label == "AND")
+	while (wordNow.label == "AND")
 	{
 		Syntax_Analysis_Main(true, true); // &&
 
@@ -1273,8 +1278,9 @@ void parseLAndExp()
 		Code code2("DOWN", 1);
 		codeList.push_back(code2);
 
-		parseLAndExp();
+		parseEqExp();
 		label->setPoint(codeList.size());
+		outputSyntax_Analysis("LAndExp");
 	}
 }
 
@@ -1283,7 +1289,7 @@ void parseLOrExp()
 	parseLAndExp();
 
 	outputSyntax_Analysis("LOrExp");
-	if (wordNow.label == "OR")
+	while (wordNow.label == "OR")
 	{
 		Syntax_Analysis_Main(true, true); // ||
 		//22
@@ -1293,8 +1299,9 @@ void parseLOrExp()
 		Code code2("DOWN", 1);
 		codeList.push_back(code2);
 
-		parseLOrExp();
+		parseLAndExp();
 		label->setPoint(codeList.size());
+		outputSyntax_Analysis("LOrExp");
 	}
 }
 
@@ -1344,28 +1351,82 @@ void parseForStmt()
 	Syntax_Analysis_Main(true, true); // =
 	parseExp();
 
+	Code code("STOS");
+	codeList.push_back(code);
+
 	outputSyntax_Analysis("ForStmt");
 }
 
 void parseFor()
 {
+	//만약 2 -> 3 이면, 2에 Code추가, 3에 라벨 추가.
+	/* for( 1 ; (2,5) ; 4){
+		3
+	} 6*/
+	int oneNotCalled = true;
+	int twoNotCalled = true;
+	int threeNotCalled = true;
+	Label *labelZeroToThree = new Label();
+	Label *labelOneToThree = new Label();
+	Label *labelTwoToThree = new Label();  // J to 3 { block } 2 -> 3
+	Label *labelThreeToTwo = new Label();
+	Label *labelThreeToThree = new Label();
+	Label *labelThreeToFour = new Label(); // J to for의 3번째( i++ ) 3 -> 4
+	Label *labelFourToThree = new Label();
+	Label *labelFourToFive = new Label(); // J to for의 2번째 ( i<3 ) 4 -> 5(2)
+	Label *labelToBreak = new Label(); // BZT to 6; 2 -> 6, 5 -> 6
+
+	isFor++;
+	forLabel1.push_back(labelToBreak); // break을 위한 for 밖으로 나가는 라벨
+	
+	
 	Syntax_Analysis_Main(true, true); // for
 	Syntax_Analysis_Main(true, true); // (
 	if (wordNow.idenfr != ";")
 	{
+		oneNotCalled = false;
 		parseForStmt();
 	}
 	Syntax_Analysis_Main(true, true); //;
 	if (wordNow.idenfr != ";")
 	{
+		// 만약 4번이 없을시
+		labelThreeToTwo->setPoint(codeList.size());
+		
+		twoNotCalled = false;
+		labelFourToFive->setPoint(codeList.size());
+
 		parseCond();
+		Code codeToBreak("BZT", labelToBreak);
+		codeList.push_back(codeToBreak);
+		Code codeTwoToThree("J", labelTwoToThree);
+		codeList.push_back(codeTwoToThree);
 	}
 	Syntax_Analysis_Main(true, true); // ;
 	if(wordNow.idenfr!=")")
 	{
-		parseForStmt();
+		threeNotCalled = false;
+		//12 || 1
+		if (twoNotCalled)
+		{	
+			Code codeZeroToThree("J", labelZeroToThree);
+			codeList.push_back(codeZeroToThree);
+			labelThreeToFour->setPoint(codeList.size());
+
+			parseForStmt();
+
+			Code codeFourToThree("J", labelFourToThree);
+			codeList.push_back(codeFourToThree);
+		}
+		else
+		{
+			labelThreeToFour->setPoint(codeList.size());
+			parseForStmt();
+			Code codeFourToFive("J", labelFourToFive);
+			codeList.push_back(codeFourToFive);
+		}
 	}
-	
+
 	// ()가 잘 닫히는지 확인하는 오류. 함수에서 )까지 출력한다.
 	parseErrorJ();
 
@@ -1375,7 +1436,73 @@ void parseFor()
 		numOfBlocks++;
 
 	isCirculer[levelNow + numOfBlocks] = true;
+
+	if(twoNotCalled){
+		//2
+		if(!oneNotCalled && !threeNotCalled)
+		{
+			labelOneToThree->setPoint(codeList.size());
+		}
+		//12
+		else if(oneNotCalled && !threeNotCalled){
+		}
+		labelFourToThree->setPoint(codeList.size());
+		labelZeroToThree->setPoint(codeList.size());
+	}
+	else if(!twoNotCalled)
+	{
+		labelTwoToThree->setPoint(codeList.size());
+	}
+	labelThreeToThree->setPoint(codeList.size());
+
+	//forLabel2.push_back(labelThreeToThree);을 위한 코드
+	if(twoNotCalled && threeNotCalled){
+		forLabel2.push_back(labelThreeToThree);
+	}
+	else if(threeNotCalled && !twoNotCalled){
+		forLabel2.push_back(labelThreeToTwo);
+	}
+	else if(!twoNotCalled && !threeNotCalled){
+		forLabel2.push_back(labelThreeToFour);
+	}
 	parseStmt();
+
+	if(threeNotCalled)
+	{
+		//3
+		if(!oneNotCalled&&!twoNotCalled)
+		{
+			Code codeThreeToTwo("J", labelThreeToTwo);
+			codeList.push_back(codeThreeToTwo);
+		}
+		//23
+		else if(!oneNotCalled && twoNotCalled)
+		{
+			Code codeThreeToThree("J", labelThreeToThree);
+			codeList.push_back(codeThreeToThree);
+		}
+		//2
+		else if (oneNotCalled && !twoNotCalled)
+		{
+			Code codeThreeToTwo("J", labelThreeToTwo);
+			codeList.push_back(codeThreeToTwo);
+		}
+		//123
+		else if(oneNotCalled&&twoNotCalled&&threeNotCalled)
+		{
+			Code codeThreeToThree("J", labelThreeToThree);
+			codeList.push_back(codeThreeToThree);
+		}
+	}
+	else if(!threeNotCalled)
+	{
+		Code codeThreeToFour("J", labelThreeToFour);
+		codeList.push_back(codeThreeToFour);
+	}
+	labelToBreak->setPoint(codeList.size());
+	isFor--;
+	forLabel1.pop_back();
+	forLabel2.pop_back();
 }
 
 void parseReadStmt()
@@ -1621,12 +1748,21 @@ void parseStmt()
 	}
 	else if (wordNow.label== "BREAKTK" ||wordNow.label == "CONTINUETK")
 	{
+		if (wordNow.label == "BREAKTK" && isFor > 0)
+		{
+			Code code1("J", forLabel1.back());
+			codeList.push_back(code1);
+		}
+		if (wordNow.label == "CONTINUETK" && isFor > 0)
+		{
+			Code code1("J", forLabel2.back());
+			codeList.push_back(code1);
+		}
 		lastNonTerminalLine = wordNow.lineId;
 
 		if(!isCirculer[levelNow])
 			error(wordNow.lineId, "m");
 
-		/* Code code1("J",) */
 		Syntax_Analysis_Main(true, true);
 
 		//;가 없는지 확인하는 에러. 있으면 ;까지 출력
@@ -1760,17 +1896,24 @@ RecordValue parseConstInitVal()
 		if (wordNow.idenfr != "}")
 		{
 			RecordValue recordValue1 = parseConstInitVal();
-			values.insert(values.end(), recordValue1.getValues().begin(), recordValue1.getValues().end());
+			for (int i = 0;i<recordValue1.getValues().size();i++){
+				values.push_back(recordValue1.getValues()[i]);
+			}
+				/* values.insert(values.end(), recordValue1.getValues().begin(), recordValue1.getValues().end()); */
 
 			while(wordNow.idenfr==",")
 			{
 				Syntax_Analysis_Main(true, true);
 				RecordValue recordValue2 = parseConstInitVal();
-				values.insert(values.end(), recordValue2.getValues().begin(), recordValue2.getValues().end());
+				/* values.insert(values.end(), recordValue2.getValues().begin(), recordValue2.getValues().end()); */
+				for (int i = 0;i<recordValue2.getValues().size();i++){
+					values.push_back(recordValue2.getValues()[i]);
+				}
 			}
 		}
 		Syntax_Analysis_Main(true, true);
 	}
+	
 	else
 	{
 		Record record = constExpValue();
@@ -1970,15 +2113,18 @@ void parseVarDef()
 		parseInitVal();
 	}
 	else{
-		Code code1("INT", 1);
-		Code code2("LDA", 0, address);
-		address++;
-		Code code3("LDC", 0);
-		Code code4("STOS");
-		codeList.push_back(code1);
-		codeList.push_back(code2);
-		codeList.push_back(code3);
-		codeList.push_back(code4);
+		for (int i = 0; i < total;i++)
+		{
+			Code code1("INT", 1);
+			Code code2("LDA", 0, address);
+			address++;
+			Code code3("LDC", 0);
+			Code code4("STOS");
+			codeList.push_back(code1);
+			codeList.push_back(code2);
+			codeList.push_back(code3);
+			codeList.push_back(code4);
+		}
 	}
 
 	outputSyntax_Analysis("VarDef");
@@ -2225,10 +2371,17 @@ void parseFuncDef()
 
 	parseBlock(true);
 
-	if(codeList[codeList.size()-1].getName()!="RET")
-	{
-		Code code1("RET");
-		codeList.push_back(code1);
+	if(!isIntFunc){
+		/* if (codeList[codeList.size() - 1].getName() != "RET" && wordList[wordCnt - 5].idenfr == ";" && wordList[wordCnt - 4].idenfr == "return")
+		{
+			Code code1("RET");
+			codeList.push_back(code1);
+		} */
+		if ((wordList[wordCnt - 5].idenfr != ";" && wordList[wordCnt - 4].idenfr == "return") || codeList[codeList.size() - 1].getName() != "RET")
+		{
+			Code code1("RET");
+			codeList.push_back(code1);
+		}
 	}
 	label->setPoint(address);
 	curBlock = curBlock->getFBlock();
@@ -2284,7 +2437,6 @@ void parseCompUnit()
 	{
 		parseDecl();
 	}
-	flag = 1;
 	Label *label = new Label();
 	Code code1("JTM", label);
 	codeList.push_back(code1);
@@ -2292,12 +2444,12 @@ void parseCompUnit()
 	flag = 0;
 	while ((wordList[wordCnt-1].label == "VOIDTK" && wordList[wordCnt+1].label == "LPARENT") || (wordList[wordCnt-1].label == "INTTK" && wordList[wordCnt].label == "IDENFR" && wordList[wordCnt+1].label == "LPARENT"))
 	{
-		if(wordList[wordCnt].label=="VOIDTK")
+		if(wordList[wordCnt-1].label=="VOIDTK")
 		{
 			currentFunctionType = VOID;
 			isIntFunc = false;
 		}
-		else if(wordList[wordCnt].label=="INTTK")
+		else if(wordList[wordCnt-1].label=="INTTK")
 		{
 			currentFunctionType = INT;
 			isIntFunc = true;
@@ -2517,16 +2669,15 @@ void outputError()
 		errorOut << errorList[i].lineId << " " << errorList[i].errType << endl;
 	}
 }
-vector<string> inputValue;
-int curretInputValue = 0;
 
 class Interpreter
 {
 private:
-	int dstack[10000] = {0};
+	int dstack[1000000] = {0};
 	int BAddr = 0;
 	int at = 0;
     int sp = -1;
+	int curretInputValue = 0;
 
 public:
     vector<string> interpret() {
@@ -2629,8 +2780,7 @@ public:
 			else if (curCode.getName() == "GET")
 			{	
 				sp++;
-				dstack[sp] = stoi(inputValue[curretInputValue++]);
-				cout << "________________" << dstack[sp]<<endl;
+				cin >> dstack[sp];
 				at++;
 			}
 			else if (curCode.getName() == "PRF")
@@ -2766,13 +2916,8 @@ public:
 		}
 	}
 };
-void inputInputTxtFile()
-{
-	string line;
-	while(getline(inFile,line)){
-		inputValue.push_back(line);
-	}
-}
+
+
 int main(void) {
     init(); 
     Lexical_Analysis();
@@ -2780,19 +2925,15 @@ int main(void) {
     outputError();
 
 	cout << "=====================================" << endl;
-	inputInputTxtFile();
+	
 	Interpreter interpreter;
 	vector<string> interpret = interpreter.interpret();
-	/* cout << interpret[0]; */
 	interpreter.outputPCode(interpret);
-
-	/* delete cur_func_symbol;
-	delete curBlock; */
-
+	
 	fclose(inputFile);
-	inFile.close();
     fout.close();
     errorOut.close();
 	pcodeOut.close();
+
 	return 0;
 }
