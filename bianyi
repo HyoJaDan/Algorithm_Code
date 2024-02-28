@@ -1384,8 +1384,32 @@ void parseFor()
 	Syntax_Analysis_Main(true, true); // (
 	if (wordNow.idenfr != ";")
 	{
+		if(wordNow.idenfr=="int")
+		{
+			Syntax_Analysis_Main(true, true); // (int)
+
+			Var_symbol *var_symbol = new Var_symbol("", 0);
+			curBlock->addSymbol(var_symbol);
+			var_symbol->setName(wordNow.idenfr);
+
+			
+			Code code1("INT", 1);
+			Code code2("LDA", 0, address);
+			Syntax_Analysis_Main(true, true); // a 출력
+			codeList.push_back(code1);
+			codeList.push_back(code2);
+			Syntax_Analysis_Main(true, true); // = 출력
+			
+			address++;
+			parseExp();
+			Code code4("STOS");
+			codeList.push_back(code4);
+		}
+		else
+		{
+			parseForStmt();
+		}
 		oneNotCalled = false;
-		parseForStmt();
 	}
 	Syntax_Analysis_Main(true, true); //;
 	if (wordNow.idenfr != ";")
@@ -2809,6 +2833,8 @@ public:
 					pos += 1;
 				}
 				res.push_back(s);
+				/* cout << s;
+				pcodeOut << s; */
 			}
 			else if (curCode.getName() == "JTM")
 			{
