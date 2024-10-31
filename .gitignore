@@ -1,8 +1,3 @@
-# Ignore all files and directories except Algorithms
-*
-!.gitignore
-!Algorithms/
-
 # Ignore specific directories and files
 .vscode/
 @__cxa_throw.dSYM/
@@ -15,3 +10,9 @@ README.md
 tasks.dSYM/
 testfile.dSYM/
 내가 푼 문제들/
+output
+tasks
+config.json
+c++
+.DS_Store
+DS_Store
