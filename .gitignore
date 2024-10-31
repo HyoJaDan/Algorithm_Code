@@ -1,0 +1,17 @@
+# Ignore all files and directories except Algorithms
+*
+!.gitignore
+!Algorithms/
+
+# Ignore specific directories and files
+.vscode/
+@__cxa_throw.dSYM/
+@__pthread_kill
+@__pthread_kill.dSYM/
+@__read_nocancel.dSYM/
+c++.dSYM/
+output.dSYM/
+README.md
+tasks.dSYM/
+testfile.dSYM/
+내가 푼 문제들/
