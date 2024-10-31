@@ -14,3 +14,5 @@ output
 tasks
 config.json
 c++
+.DS_Store
+DS_Store
