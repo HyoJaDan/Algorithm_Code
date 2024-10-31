@@ -6,9 +6,5 @@
   <img src="http://mazassumnida.wtf/api/v2/generate_badge?boj=kopasd99"/>
 </a>
 
-## 폴더 구조
-- `src/`: 알고리즘 문제 풀이 코드가 있는 폴더입니다.
-- `docs/`: 알고리즘 풀이 설명과 참고 자료를 포함합니다.
-
 ## 문제 풀이 현황
 Solved.ac에서 푼 문제들의 현황은 위 배지를 통해 확인할 수 있습니다.
